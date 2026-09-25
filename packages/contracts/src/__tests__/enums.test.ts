@@ -3,9 +3,6 @@ import {
   ScanStatus,
   AuthorizationState,
   ScanProfile,
-  Severity,
-  Confidence,
-  FindingStatus,
 } from '../enums.js';
 import { SCAN_STATE_TRANSITIONS } from '../types/scan.js';
 

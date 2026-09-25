@@ -1,7 +1,3 @@
-import { createLogger } from '@securityscan/shared';
-
-const logger = createLogger('metrics');
-
 export interface MetricLabels {
   [key: string]: string;
 }

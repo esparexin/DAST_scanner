@@ -20,7 +20,11 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@securityscan/contracts": "workspace:*"
+    "@securityscan/contracts": "workspace:*",
+    "@securityscan/shared": "workspace:*",
+    "@securityscan/scope": "workspace:*",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.4.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

@@ -1,4 +1,5 @@
-import type { ScanStatus, ScanProfile } from '../enums.js';
+import { ScanStatus } from '../enums.js';
+import type { ScanProfile } from '../enums.js';
 
 export interface IScan {
   id: string;

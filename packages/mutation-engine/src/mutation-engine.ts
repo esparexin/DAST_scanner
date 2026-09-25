@@ -27,7 +27,7 @@ export class MutationEngine {
   /**
    * Generate mutations for a JSON body based on its schema.
    */
-  mutateJsonBody(body: Record<string, unknown>, schema?: Record<string, unknown>): Array<{ mutation: Mutation; body: Record<string, unknown> }> {
+  mutateJsonBody(body: Record<string, unknown>, _schema?: Record<string, unknown>): Array<{ mutation: Mutation; body: Record<string, unknown> }> {
     const results: Array<{ mutation: Mutation; body: Record<string, unknown> }> = [];
 
     for (const [key, value] of Object.entries(body)) {

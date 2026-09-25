@@ -43,7 +43,7 @@ export class RiskClassifier {
    */
   shouldFailPipeline(
     severity: Severity,
-    confidence: Confidence,
+    _confidence: Confidence,
     status: FindingStatus,
     thresholdSeverity: Severity = Severity.HIGH,
   ): boolean {

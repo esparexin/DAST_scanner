@@ -4,3 +4,6 @@ packages:
   - 'workers/*'
   - 'checks/*'
   - 'tests/*'
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true

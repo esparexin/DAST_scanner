@@ -1,7 +1,6 @@
 import type {
   AuthorizationState,
   TargetEnvironment,
-  ScanProfile,
 } from '../enums.js';
 
 export interface ITarget {

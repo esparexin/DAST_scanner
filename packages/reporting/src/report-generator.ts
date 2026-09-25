@@ -1,4 +1,4 @@
-import { ReportFormat, Severity } from '@securityscan/contracts';
+import { Severity } from '@securityscan/contracts';
 import type { IFinding, IReportScope, IReportSummary } from '@securityscan/contracts';
 
 export interface ReportData {

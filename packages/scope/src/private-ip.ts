@@ -1,5 +1,3 @@
-import { networkInterfaces } from 'node:os';
-
 /**
  * Check if an IP address falls within a private/internal range.
  * These are blocked by default to prevent SSRF.
