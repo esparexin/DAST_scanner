@@ -22,6 +22,10 @@ export interface IFindingDocument extends Document {
   cwe: string[];
   owasp: string[];
   apiOwasp: string[];
+  wstg: string[];
+  asvs: string[];
+  cvssVector?: string;
+  cvssScore?: number;
   references: string[];
   deduplicationKey: string;
   firstDetectedAt: Date;
@@ -53,6 +57,10 @@ const FindingSchema = new Schema<IFindingDocument>(
     cwe: { type: [String], default: [] },
     owasp: { type: [String], default: [] },
     apiOwasp: { type: [String], default: [] },
+    wstg: { type: [String], default: [] },
+    asvs: { type: [String], default: [] },
+    cvssVector: String,
+    cvssScore: Number,
     references: { type: [String], default: [] },
     deduplicationKey: { type: String, required: true },
     firstDetectedAt: { type: Date, default: Date.now },

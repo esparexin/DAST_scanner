@@ -29,6 +29,27 @@ describe('ScanStatus', () => {
   });
 });
 
+describe('ScanProfile', () => {
+  it('supports all 10 production profiles', () => {
+    expect(ScanProfile.PASSIVE).toBe('PASSIVE');
+    expect(ScanProfile.QUICK).toBe('QUICK');
+    expect(ScanProfile.WEB_STANDARD).toBe('WEB_STANDARD');
+    expect(ScanProfile.API_STANDARD).toBe('API_STANDARD');
+    expect(ScanProfile.AUTHENTICATED).toBe('AUTHENTICATED');
+    expect(ScanProfile.AUTHORIZATION).toBe('AUTHORIZATION');
+    expect(ScanProfile.FULL_ASSESSMENT).toBe('FULL_ASSESSMENT');
+    expect(ScanProfile.CICD).toBe('CICD');
+    expect(ScanProfile.PRODUCTION_SAFE).toBe('PRODUCTION_SAFE');
+    expect(ScanProfile.SECURITY_LAB).toBe('SECURITY_LAB');
+  });
+
+  it('supports backward-compatibility aliases', () => {
+    expect(ScanProfile.LIGHT).toBe(ScanProfile.QUICK);
+    expect(ScanProfile.STANDARD).toBe(ScanProfile.WEB_STANDARD);
+    expect(ScanProfile.AGGRESSIVE).toBe(ScanProfile.FULL_ASSESSMENT);
+  });
+});
+
 describe('SCAN_STATE_TRANSITIONS', () => {
   it('terminal states have no transitions', () => {
     expect(SCAN_STATE_TRANSITIONS[ScanStatus.COMPLETED]).toEqual([]);

@@ -8,6 +8,7 @@ on:
 
 jobs:
   check:
+    name: Monorepo Quality Gates
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,25 +31,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build all packages
-        run: pnpm -r build
+      - name: Run Quality Gate (Lint, Typecheck, Test)
+        run: pnpm check
 
-      - name: Type check
-        run: pnpm -r typecheck
-
-      - name: Unit tests
-        run: |
-          pnpm --filter @securityscan/contracts test
-          pnpm --filter @securityscan/shared test
-          pnpm --filter @securityscan/scope test
-          pnpm --filter @securityscan/scanner-core test
-          pnpm --filter @securityscan/finding-engine test
-          pnpm --filter @securityscan/evidence-engine test
-          pnpm --filter @securityscan/reporting test
-          pnpm --filter @securityscan/crawler test
-          pnpm --filter @securityscan/openapi test
-          pnpm --filter @securityscan/authentication test
-          pnpm --filter @securityscan/mutation-engine test
-          pnpm --filter @securityscan/risk-engine test
-          pnpm --filter @securityscan/graphql test
-          pnpm --filter @securityscan/poc-engine test
+      - name: Build Monorepo (Packages, Apps, Workers, Checks)
+        run: pnpm build

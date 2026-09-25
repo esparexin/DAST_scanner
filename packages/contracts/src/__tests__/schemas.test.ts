@@ -115,7 +115,7 @@ describe('CreateScanSchema', () => {
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.profile).toBe(ScanProfile.STANDARD);
+      expect(result.data.profile).toBe(ScanProfile.WEB_STANDARD);
       expect(result.data.dryRun).toBe(false);
     }
   });

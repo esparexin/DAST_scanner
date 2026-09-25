@@ -1,29 +1,21 @@
 import type { SecurityCheck, CheckContext, CheckResult } from '@securityscan/detection-engine';
-import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod } from '@securityscan/contracts';
+import {
+  PayloadRegistry,
+  PayloadSelector,
+  MutationPipeline,
+  PayloadTestExecutor,
+  SQLI_CATALOG,
+} from '@securityscan/payload-engine';
+import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod, ScanProfile } from '@securityscan/contracts';
 
-// Common deterministic database error signatures
-const SQL_ERROR_PATTERNS = [
-  // PostgreSQL
-  /syntax error at or near/i,
-  /invalid input syntax for/i,
-  /pg_query\(\):/i,
-  // MySQL / MariaDB
-  /you have an error in your sql syntax/i,
-  /check the manual that corresponds to your (mysql|mariadb)/i,
-  /warning: mysql_/i,
-  // SQLite
-  /unrecognized token:/i,
-  /sqlite3::sqlexception/i,
-  // SQL Server
-  /unclosed quotation mark after the character string/i,
-  /microsoft ole db provider for sql server/i,
-  // Oracle
-  /ora-01756: quoted string not properly terminated/i,
-  /ora-00933: sql command not properly ended/i,
-];
+const defaultRegistry = new PayloadRegistry();
+defaultRegistry.registerAll(SQLI_CATALOG);
 
 export class SqlInjectionChecks {
-  static getChecks(): SecurityCheck[] {
+  static getChecks(registry = defaultRegistry): SecurityCheck[] {
+    const selector = new PayloadSelector(registry);
+    const pipeline = new MutationPipeline();
+
     return [
       {
         rule: {
@@ -50,48 +42,68 @@ export class SqlInjectionChecks {
         async run(ctx: CheckContext): Promise<CheckResult[]> {
           const results: CheckResult[] = [];
           const testUrl = new URL(ctx.endpoint.url);
+          const executor = new PayloadTestExecutor(ctx.httpClient);
 
-          // Check each query parameter safely using benign canary probe
           for (const [key, value] of testUrl.searchParams.entries()) {
-            const probeUrl = new URL(ctx.endpoint.url);
-            // Disruption probe
-            probeUrl.searchParams.set(key, `${value}'"`);
+            // Use context-aware selector to pick calibrated SQLi payloads
+            const selectedPayloads = selector.select({
+              name: key,
+              location: 'query',
+              type: /^\d+$/.test(value) ? 'integer' : 'string',
+              category: DetectionCategory.INJECTION,
+              scanProfile: ScanProfile.WEB_STANDARD,
+              maxProbesPerParam: 3,
+            });
 
-            try {
-              const res = await ctx.httpClient.request({
-                method: HttpMethod.GET,
-                url: probeUrl.toString(),
-              });
+            for (const payload of selectedPayloads) {
+              const variants = pipeline.materialize(payload, key, value);
 
-              // Check if any well-known database error is leaked
-              for (const pattern of SQL_ERROR_PATTERNS) {
-                if (pattern.test(res.body)) {
-                  results.push({
-                    ruleId: 'SEC-SQLI-001',
-                    title: 'SQL Injection Leaking Database Error',
-                    description: `Parameter '${key}' leaked a database error signature when tested with quote characters.`,
-                    impact: 'High-risk database compromise, unauthorized data extraction, and potential integrity tampering.',
-                    severity: Severity.CRITICAL,
-                    confidence: Confidence.CONFIRMED,
-                    category: DetectionCategory.INJECTION,
-                    endpoint: ctx.endpoint.url,
-                    method: 'GET',
-                    parameter: key,
-                    remediation: 'Implement parameterized statements and disable verbose database error messages in production.',
-                    cwe: ['CWE-89'],
-                    owasp: ['A03:2021'],
-                    apiOwasp: ['API8:2023'],
-                    references: [],
-                    evidence: {
-                      request: { method: 'GET', url: probeUrl.toString(), headers: {} },
-                      response: { statusCode: res.statusCode, headers: res.headers, body: res.body.slice(0, 1000), responseTime: res.responseTime },
-                    },
-                  });
-                  break; // Found one pattern for this param
+              for (const variant of variants) {
+                try {
+                  const executed = await executor.executeVariantOnUrlParam(
+                    ctx.endpoint.url,
+                    key,
+                    variant,
+                    HttpMethod.GET,
+                  );
+
+                  // Match against error signatures defined in the payload metadata
+                  const errorSignatures = payload.detection.errorSignatures ?? [];
+                  for (const sig of errorSignatures) {
+                    if (executed.responseBodySnippet.toLowerCase().includes(sig.toLowerCase())) {
+                      results.push({
+                        ruleId: 'SEC-SQLI-001',
+                        title: 'SQL Injection Leaking Database Error',
+                        description: `Parameter '${key}' leaked a database error signature '${sig}' with payload ${variant.description}.`,
+                        impact: 'High-risk database compromise, unauthorized data extraction, and potential integrity tampering.',
+                        severity: Severity.CRITICAL,
+                        confidence: Confidence.CONFIRMED,
+                        category: DetectionCategory.INJECTION,
+                        endpoint: ctx.endpoint.url,
+                        method: 'GET',
+                        parameter: key,
+                        remediation: payload.remediation.guidance,
+                        cwe: payload.references.cwe,
+                        owasp: payload.references.owaspTop10,
+                        apiOwasp: payload.references.owaspApiSecurity,
+                        references: [],
+                        evidence: {
+                          request: { method: 'GET', url: executed.url, headers: {} },
+                          response: {
+                            statusCode: executed.statusCode,
+                            headers: executed.responseHeaders,
+                            body: executed.responseBodySnippet,
+                            responseTime: executed.responseTimeMs,
+                          },
+                        },
+                      });
+                      return results; // Return early on confirmed critical finding
+                    }
+                  }
+                } catch {
+                  // Non-fatal loop continue
                 }
               }
-            } catch {
-              // Scope or connectivity check failure is non-fatal for loop
             }
           }
 

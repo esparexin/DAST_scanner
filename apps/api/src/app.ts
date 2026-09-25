@@ -11,6 +11,7 @@ import { endpointRoutes } from './routes/endpoint.routes.js';
 import { authProfileRoutes } from './routes/auth-profile.routes.js';
 import { apiSchemaRoutes } from './routes/api-schema.routes.js';
 import { metricsRoutes } from './routes/metrics.routes.js';
+import { auditRoutes } from './routes/audit.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 export function createApp() {
@@ -31,6 +32,7 @@ export function createApp() {
   app.use('/api/auth-profiles', authProfileRoutes);
   app.use('/api/apis', apiSchemaRoutes);
   app.use('/api/metrics', metricsRoutes);
+  app.use('/api/audit', auditRoutes);
 
   // Error handling
   app.use(errorHandler);

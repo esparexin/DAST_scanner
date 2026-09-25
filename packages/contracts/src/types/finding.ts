@@ -27,6 +27,10 @@ export interface IFinding {
   cwe: string[];
   owasp: string[];
   apiOwasp: string[];
+  wstg: string[];
+  asvs: string[];
+  cvssVector?: string;
+  cvssScore?: number;
   references: string[];
   deduplicationKey: string;
   firstDetectedAt: Date;
@@ -54,5 +58,9 @@ export interface ICreateFinding {
   cwe: string[];
   owasp: string[];
   apiOwasp?: string[];
+  wstg?: string[];
+  asvs?: string[];
+  cvssVector?: string;
+  cvssScore?: number;
   references?: string[];
 }

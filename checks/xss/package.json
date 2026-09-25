@@ -23,6 +23,7 @@
     "@securityscan/contracts": "workspace:*",
     "@securityscan/detection-engine": "workspace:*",
     "@securityscan/http-client": "workspace:*",
+    "@securityscan/payload-engine": "workspace:*",
     "@securityscan/shared": "workspace:*"
   },
   "devDependencies": {

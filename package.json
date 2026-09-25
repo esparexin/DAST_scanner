@@ -1,28 +1,35 @@
 {
   "name": "securityscan",
   "version": "0.1.0",
-  "description": "Web Application & API Security Testing Platform",
   "private": true,
-  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run --passWithNoTests",
+    "test:unit": "pnpm -r test:unit",
+    "test:e2e": "pnpm --filter @securityscan/tests-security-lab test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "dev:api": "pnpm --filter @securityscan/api dev",
+    "dev:web": "pnpm --filter @securityscan/web dev",
+    "seed": "tsx scripts/seed.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "eslint": "^9.16.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.0.0"
+  },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
-  },
-  "scripts": {
-    "dev": "pnpm --parallel --filter './apps/*' dev",
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "test:unit": "pnpm -r test:unit",
-    "test:integration": "pnpm -r test:integration",
-    "lint": "pnpm -r lint",
-    "lint:fix": "pnpm -r lint:fix",
-    "typecheck": "pnpm -r typecheck",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "clean": "pnpm -r clean",
-    "infra:up": "docker compose -f infrastructure/compose/docker-compose.yml up -d",
-    "infra:down": "docker compose -f infrastructure/compose/docker-compose.yml down",
-    "check": "pnpm lint && pnpm typecheck && pnpm test",
-    "prepare": "echo 'ready'"
   }
 }

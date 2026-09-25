@@ -1,8 +1,21 @@
 import type { SecurityCheck, CheckContext, CheckResult } from '@securityscan/detection-engine';
-import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod } from '@securityscan/contracts';
+import {
+  PayloadRegistry,
+  PayloadSelector,
+  MutationPipeline,
+  PayloadTestExecutor,
+  TRAVERSAL_CATALOG,
+} from '@securityscan/payload-engine';
+import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod, ScanProfile } from '@securityscan/contracts';
+
+const defaultRegistry = new PayloadRegistry();
+defaultRegistry.registerAll(TRAVERSAL_CATALOG);
 
 export class PathTraversalChecks {
-  static getChecks(): SecurityCheck[] {
+  static getChecks(registry = defaultRegistry): SecurityCheck[] {
+    const selector = new PayloadSelector(registry);
+    const pipeline = new MutationPipeline();
+
     return [
       {
         rule: {
@@ -29,47 +42,68 @@ export class PathTraversalChecks {
         async run(ctx: CheckContext): Promise<CheckResult[]> {
           const results: CheckResult[] = [];
           const testUrl = new URL(ctx.endpoint.url);
+          const executor = new PayloadTestExecutor(ctx.httpClient);
 
-          for (const [key] of testUrl.searchParams.entries()) {
-            // Common file parameter candidates
+          for (const [key, value] of testUrl.searchParams.entries()) {
             if (!/(file|path|doc|template|page|include|image|load)/i.test(key)) continue;
 
-            const traversalProbe = '../../../../etc/passwd';
-            const probeUrl = new URL(ctx.endpoint.url);
-            probeUrl.searchParams.set(key, traversalProbe);
+            const selectedPayloads = selector.select({
+              name: key,
+              location: 'query',
+              type: 'file',
+              category: DetectionCategory.PATH_TRAVERSAL,
+              scanProfile: ScanProfile.WEB_STANDARD,
+              maxProbesPerParam: 2,
+            });
 
-            try {
-              const res = await ctx.httpClient.request({
-                method: HttpMethod.GET,
-                url: probeUrl.toString(),
-              });
+            for (const payload of selectedPayloads) {
+              const variants = pipeline.materialize(payload, key, value);
 
-              // Check for root user line signature in standard Unix passwd file format
-              if (/root:x?:0:0:[^:]*:\/root:/i.test(res.body)) {
-                results.push({
-                  ruleId: 'SEC-PT-001',
-                  title: 'Arbitrary File Read via Path Traversal',
-                  description: `Parameter '${key}' allowed directory traversal to access system configuration files.`,
-                  impact: 'Full disclosure of sensitive configuration files, source code, and credentials.',
-                  severity: Severity.HIGH,
-                  confidence: Confidence.CONFIRMED,
-                  category: DetectionCategory.PATH_TRAVERSAL,
-                  endpoint: ctx.endpoint.url,
-                  method: 'GET',
-                  parameter: key,
-                  remediation: 'Resolve absolute canonical paths and verify the resulting path stays within intended root.',
-                  cwe: ['CWE-22'],
-                  owasp: ['A01:2021'],
-                  apiOwasp: [],
-                  references: [],
-                  evidence: {
-                    request: { method: 'GET', url: probeUrl.toString(), headers: {} },
-                    response: { statusCode: res.statusCode, headers: res.headers, body: res.body.slice(0, 500), responseTime: res.responseTime },
-                  },
-                });
+              for (const variant of variants) {
+                try {
+                  const executed = await executor.executeVariantOnUrlParam(
+                    ctx.endpoint.url,
+                    key,
+                    variant,
+                    HttpMethod.GET,
+                  );
+
+                  const errorSignatures = payload.detection.errorSignatures ?? [];
+                  for (const sig of errorSignatures) {
+                    if (executed.responseBodySnippet.includes(sig)) {
+                      results.push({
+                        ruleId: 'SEC-PT-001',
+                        title: 'Arbitrary File Read via Path Traversal',
+                        description: `Parameter '${key}' allowed directory traversal to access system files using ${variant.description}.`,
+                        impact: 'Full disclosure of sensitive configuration files, source code, and credentials.',
+                        severity: Severity.HIGH,
+                        confidence: Confidence.CONFIRMED,
+                        category: DetectionCategory.PATH_TRAVERSAL,
+                        endpoint: ctx.endpoint.url,
+                        method: 'GET',
+                        parameter: key,
+                        remediation: payload.remediation.guidance,
+                        cwe: payload.references.cwe,
+                        owasp: payload.references.owaspTop10,
+                        apiOwasp: payload.references.owaspApiSecurity,
+                        references: [],
+                        evidence: {
+                          request: { method: 'GET', url: executed.url, headers: {} },
+                          response: {
+                            statusCode: executed.statusCode,
+                            headers: executed.responseHeaders,
+                            body: executed.responseBodySnippet,
+                            responseTime: executed.responseTimeMs,
+                          },
+                        },
+                      });
+                      return results; // Return early on confirmed finding
+                    }
+                  }
+                } catch {
+                  // Safe continue
+                }
               }
-            } catch {
-              // Safe continue
             }
           }
 

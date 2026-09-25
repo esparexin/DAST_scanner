@@ -13,10 +13,13 @@ export interface ISecurityRule {
   type: DetectionType;
   severity: Severity;
   confidence: Confidence;
+  cvssVector?: string;
+  cvssScore?: number;
   owasp: string[];
   apiOwasp: string[];
   cwe: string[];
   wstg: string[];
+  asvs: string[];
   portswigger: string[];
   remediation: string;
   references: string[];

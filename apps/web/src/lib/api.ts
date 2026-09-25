@@ -65,6 +65,18 @@ export interface ApiReport {
   createdAt: string;
 }
 
+export interface ApiAuditLog {
+  id?: string;
+  _id?: string;
+  userId: string;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  details?: Record<string, unknown>;
+  ipAddress: string;
+  timestamp: string;
+}
+
 export interface ApiStats {
   activeScans: number;
   totalProjects: number;
@@ -122,6 +134,12 @@ export const reportsApi = {
       method: 'POST',
       body: JSON.stringify({ scanId, format }),
     }),
+};
+
+// Audit Logs
+export const auditApi = {
+  list: (action?: string) =>
+    fetchApi<ApiAuditLog[]>(action ? `/api/audit?action=${action}` : '/api/audit'),
 };
 
 // Dashboard stats

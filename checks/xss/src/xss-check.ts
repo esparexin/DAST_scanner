@@ -1,8 +1,21 @@
 import type { SecurityCheck, CheckContext, CheckResult } from '@securityscan/detection-engine';
-import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod } from '@securityscan/contracts';
+import {
+  PayloadRegistry,
+  PayloadSelector,
+  MutationPipeline,
+  PayloadTestExecutor,
+  XSS_CATALOG,
+} from '@securityscan/payload-engine';
+import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod, ScanProfile } from '@securityscan/contracts';
+
+const defaultRegistry = new PayloadRegistry();
+defaultRegistry.registerAll(XSS_CATALOG);
 
 export class XssChecks {
-  static getChecks(): SecurityCheck[] {
+  static getChecks(registry = defaultRegistry): SecurityCheck[] {
+    const selector = new PayloadSelector(registry);
+    const pipeline = new MutationPipeline();
+
     return [
       {
         rule: {
@@ -29,47 +42,65 @@ export class XssChecks {
         async run(ctx: CheckContext): Promise<CheckResult[]> {
           const results: CheckResult[] = [];
           const testUrl = new URL(ctx.endpoint.url);
+          const executor = new PayloadTestExecutor(ctx.httpClient);
 
-          for (const [key] of testUrl.searchParams.entries()) {
-            // Safe, unique random alphanumeric canary tag
-            const canary = `xsscanary${Math.random().toString(36).slice(2, 8)}`;
-            const probePayload = `<${canary}>`;
-            const probeUrl = new URL(ctx.endpoint.url);
-            probeUrl.searchParams.set(key, probePayload);
+          for (const [key, value] of testUrl.searchParams.entries()) {
+            const selectedPayloads = selector.select({
+              name: key,
+              location: 'query',
+              type: 'string',
+              category: DetectionCategory.XSS,
+              scanProfile: ScanProfile.WEB_STANDARD,
+              maxProbesPerParam: 2,
+            });
 
-            try {
-              const res = await ctx.httpClient.request({
-                method: HttpMethod.GET,
-                url: probeUrl.toString(),
-              });
+            for (const payload of selectedPayloads) {
+              const variants = pipeline.materialize(payload, key, value);
 
-              const contentType = res.headers['content-type'] ?? '';
-              // Only report if returned as HTML and payload is unescaped
-              if (contentType.includes('text/html') && res.body.includes(probePayload)) {
-                results.push({
-                  ruleId: 'SEC-XSS-001',
-                  title: 'Reflected Cross-Site Scripting (XSS)',
-                  description: `Parameter '${key}' reflects unescaped markup in an HTML context.`,
-                  impact: 'Session hijacking, arbitrary script execution in authenticated victims browser context.',
-                  severity: Severity.HIGH,
-                  confidence: Confidence.CONFIRMED,
-                  category: DetectionCategory.XSS,
-                  endpoint: ctx.endpoint.url,
-                  method: 'GET',
-                  parameter: key,
-                  remediation: 'Ensure user input reflected into HTML context is strictly HTML-entity encoded.',
-                  cwe: ['CWE-79'],
-                  owasp: ['A03:2021'],
-                  apiOwasp: [],
-                  references: [],
-                  evidence: {
-                    request: { method: 'GET', url: probeUrl.toString(), headers: {} },
-                    response: { statusCode: res.statusCode, headers: res.headers, body: res.body.slice(0, 1000), responseTime: res.responseTime },
-                  },
-                });
+              for (const variant of variants) {
+                try {
+                  const executed = await executor.executeVariantOnUrlParam(
+                    ctx.endpoint.url,
+                    key,
+                    variant,
+                    HttpMethod.GET,
+                  );
+
+                  const contentType = executed.responseHeaders['content-type'] ?? '';
+                  // Detect canary reflection in HTML context
+                  if (contentType.includes('text/html') && executed.canaryObserved) {
+                    results.push({
+                      ruleId: 'SEC-XSS-001',
+                      title: 'Reflected Cross-Site Scripting (XSS)',
+                      description: `Parameter '${key}' reflects unescaped canary '${variant.canaryToken}' in an HTML context.`,
+                      impact: 'Session hijacking, arbitrary script execution in authenticated victims browser context.',
+                      severity: Severity.HIGH,
+                      confidence: Confidence.CONFIRMED,
+                      category: DetectionCategory.XSS,
+                      endpoint: ctx.endpoint.url,
+                      method: 'GET',
+                      parameter: key,
+                      remediation: payload.remediation.guidance,
+                      cwe: payload.references.cwe,
+                      owasp: payload.references.owaspTop10,
+                      apiOwasp: payload.references.owaspApiSecurity,
+                      references: [],
+                      evidence: {
+                        request: { method: 'GET', url: executed.url, headers: {} },
+                        response: {
+                          statusCode: executed.statusCode,
+                          headers: executed.responseHeaders,
+                          body: executed.responseBodySnippet,
+                          responseTime: executed.responseTimeMs,
+                        },
+                      },
+                    });
+                    return results; // Return early on confirmed finding
+                  }
+                } catch {
+                  // Non-fatal loop continue
+                }
               }
-            } catch {
-              // Non-fatal loop continue
             }
           }
 

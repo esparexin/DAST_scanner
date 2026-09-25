@@ -1,0 +1,61 @@
+name: Automated Security Testing
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Run weekly on Monday at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Authorized Target URL to Scan'
+        required: true
+        default: 'https://staging.example.com'
+      scan_profile:
+        description: 'Scan Profile (PASSIVE, QUICK, WEB_STANDARD, API_STANDARD, CICD, FULL_ASSESSMENT)'
+        required: true
+        default: 'CICD'
+      fail_on:
+        description: 'Severity Threshold to Fail Pipeline (CRITICAL, HIGH, MEDIUM, LOW)'
+        required: true
+        default: 'HIGH'
+
+jobs:
+  security-scan:
+    name: DAST & API Security Assessment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI Runner
+        run: pnpm --filter @securityscan/cli... build
+
+      - name: Execute SecurityScan CLI
+        id: scanner
+        run: |
+          node apps/cli/dist/index.js run \
+            --target "${{ github.event.inputs.target_url || 'https://staging.example.com' }}" \
+            --profile "${{ github.event.inputs.scan_profile || 'CICD' }}" \
+            --fail-on "${{ github.event.inputs.fail_on || 'HIGH' }}" \
+            --output "securityscan-results.sarif"
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: securityscan-results.sarif
+          category: securityscan-dast
