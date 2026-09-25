@@ -1,0 +1,62 @@
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/contracts/package.json packages/contracts/
+COPY packages/shared/package.json packages/shared/
+COPY packages/scope/package.json packages/scope/
+COPY packages/http-client/package.json packages/http-client/
+COPY packages/payload-engine/package.json packages/payload-engine/
+COPY packages/knowledge-base/package.json packages/knowledge-base/
+COPY packages/ai/package.json packages/ai/
+COPY packages/detection-engine/package.json packages/detection-engine/
+COPY packages/finding-engine/package.json packages/finding-engine/
+COPY packages/evidence-engine/package.json packages/evidence-engine/
+COPY packages/risk-engine/package.json packages/risk-engine/
+COPY packages/verification-engine/package.json packages/verification-engine/
+COPY packages/scanner-core/package.json packages/scanner-core/
+COPY packages/crawler/package.json packages/crawler/
+COPY checks/injection/package.json checks/injection/
+COPY checks/xss/package.json checks/xss/
+COPY checks/path-traversal/package.json checks/path-traversal/
+COPY checks/ssrf/package.json checks/ssrf/
+COPY checks/csrf/package.json checks/csrf/
+COPY checks/file-upload/package.json checks/file-upload/
+COPY checks/access-control/package.json checks/access-control/
+COPY checks/api/package.json checks/api/
+COPY checks/authentication/package.json checks/authentication/
+COPY checks/authorization/package.json checks/authorization/
+COPY checks/cryptography/package.json checks/cryptography/
+COPY checks/misconfiguration/package.json checks/misconfiguration/
+COPY workers/orchestrator/package.json workers/orchestrator/
+RUN pnpm install --frozen-lockfile --prod=false
+
+# Build
+FROM deps AS builder
+COPY tsconfig.base.json ./
+COPY packages/ packages/
+COPY checks/ checks/
+COPY workers/orchestrator/ workers/orchestrator/
+RUN pnpm --filter @securityscan/worker-orchestrator... build
+
+# Production image
+FROM node:20-alpine AS runner
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/checks ./checks
+COPY --from=builder /app/workers/orchestrator ./workers/orchestrator
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD test -f /tmp/worker-healthy || exit 1
+
+CMD ["node", "workers/orchestrator/dist/index.js"]

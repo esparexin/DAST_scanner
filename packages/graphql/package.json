@@ -1,0 +1,31 @@
+{
+  "name": "@securityscan/graphql",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@securityscan/contracts": "workspace:*",
+    "@securityscan/http-client": "workspace:*",
+    "@securityscan/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

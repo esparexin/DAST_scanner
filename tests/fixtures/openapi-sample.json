@@ -1,0 +1,64 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Test API",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "https://api.example.com" }],
+  "paths": {
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List users",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "post": {
+        "operationId": "createUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "role": { "type": "string", "enum": ["user", "admin"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created" } },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "getUser",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not Found" } },
+        "security": [{ "bearerAuth": [] }]
+      },
+      "delete": {
+        "operationId": "deleteUser",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "Deleted" } },
+        "security": [{ "bearerAuth": [] }]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "securityscan",
+  "version": "0.1.0",
+  "description": "Web Application & API Security Testing Platform",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:integration": "pnpm -r test:integration",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "pnpm -r clean",
+    "infra:up": "docker compose -f infrastructure/compose/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infrastructure/compose/docker-compose.yml down",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "prepare": "echo 'ready'"
+  }
+}

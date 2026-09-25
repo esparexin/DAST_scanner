@@ -1,0 +1,27 @@
+{
+  "name": "@securityscan/worker-evidence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:unit": "vitest run --passWithNoTests",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@securityscan/contracts": "workspace:*",
+    "@securityscan/shared": "workspace:*",
+    "@securityscan/database": "workspace:*",
+    "@securityscan/evidence-engine": "workspace:*",
+    "@securityscan/ai": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
