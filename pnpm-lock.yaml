@@ -68,6 +68,9 @@ importers:
       '@securityscan/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@securityscan/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -1299,6 +1302,9 @@ importers:
       '@securityscan/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@securityscan/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
     devDependencies:
       typescript:
         specifier: ^5.5.0
@@ -1479,6 +1485,9 @@ importers:
       '@securityscan/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@securityscan/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
     devDependencies:
       typescript:
         specifier: ^5.5.0

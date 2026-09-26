@@ -27,6 +27,8 @@ export interface IEvidenceDocument extends Document {
   timestamp: Date;
   relevantHeaders: Record<string, string>;
   relevantResponseData: string;
+  storageKey?: string;
+  storageUrl?: string;
   createdAt: Date;
 }
 
@@ -60,6 +62,8 @@ const EvidenceSchema = new Schema<IEvidenceDocument>(
     timestamp: { type: Date, default: Date.now },
     relevantHeaders: { type: Schema.Types.Mixed, default: {} },
     relevantResponseData: { type: String, default: '' },
+    storageKey: String,
+    storageUrl: String,
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

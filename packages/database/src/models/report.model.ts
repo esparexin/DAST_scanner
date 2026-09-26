@@ -29,6 +29,8 @@ export interface IReportDocument extends Document {
   };
   content?: string;
   filePath?: string;
+  storageKey?: string;
+  storageUrl?: string;
   createdAt: Date;
 }
 
@@ -61,6 +63,8 @@ const ReportSchema = new Schema<IReportDocument>(
     },
     content: String,
     filePath: String,
+    storageKey: String,
+    storageUrl: String,
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

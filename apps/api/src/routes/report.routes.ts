@@ -3,6 +3,7 @@ import { ReportModel, ScanModel, FindingModel, TargetModel } from '@securityscan
 import { GenerateReportSchema, ReportFormat } from '@securityscan/contracts';
 import { ReportGenerator } from '@securityscan/reporting';
 import { SarifGenerator } from '@securityscan/reporting';
+import { createStorageProvider } from '@securityscan/storage';
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 
@@ -25,6 +26,51 @@ reportRouter.get('/:id', async (req: AuthRequest, res, next) => {
     const report = await ReportModel.findById(req.params['id']);
     if (!report) { res.status(404).json({ error: { message: 'Report not found' } }); return; }
     res.json({ data: report });
+  } catch (err) { next(err); }
+});
+
+reportRouter.get('/:id/download', async (req: AuthRequest, res, next) => {
+  try {
+    const report = await ReportModel.findById(req.params['id']);
+    if (!report) { res.status(404).json({ error: { message: 'Report not found' } }); return; }
+
+    const ext = report.format === ReportFormat.SARIF ? 'sarif' : report.format === ReportFormat.HTML ? 'html' : 'json';
+    const filename = `report-${report._id}.${ext}`;
+    const contentType =
+      report.format === ReportFormat.SARIF
+        ? 'application/sarif+json'
+        : report.format === ReportFormat.HTML
+          ? 'text/html'
+          : 'application/json';
+
+    if (report.storageKey) {
+      try {
+        const storage = createStorageProvider();
+        const presignedUrl = await storage.getPresignedUrl(report.storageKey, 3600);
+        if (presignedUrl.startsWith('http://') || presignedUrl.startsWith('https://')) {
+          res.redirect(presignedUrl);
+          return;
+        }
+        const buffer = await storage.getObject(report.storageKey);
+        if (buffer) {
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+          res.send(buffer);
+          return;
+        }
+      } catch {
+        // Fall back to content field
+      }
+    }
+
+    if (report.content) {
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(report.content);
+      return;
+    }
+
+    res.status(404).json({ error: { message: 'Report content not found' } });
   } catch (err) { next(err); }
 });
 
@@ -53,17 +99,49 @@ reportRouter.post('/generate', validate(GenerateReportSchema), async (req: AuthR
     };
 
     let content: string;
+    let contentType: string;
+    let ext: string;
     if (format === ReportFormat.SARIF) {
       content = sarifGen.generate(findingsObj, target.baseUrl);
+      contentType = 'application/sarif+json';
+      ext = 'sarif';
     } else if (format === ReportFormat.HTML) {
       content = reportGen.generateHTML({ title: reportTitle, scope, findings: findingsObj, generatedAt: new Date() });
+      contentType = 'text/html';
+      ext = 'html';
     } else {
       content = reportGen.generateJSON({ title: reportTitle, scope, findings: findingsObj, generatedAt: new Date() });
+      contentType = 'application/json';
+      ext = 'json';
+    }
+
+    let storageKey: string | undefined;
+    let storageUrl: string | undefined;
+    try {
+      const storage = createStorageProvider();
+      storageKey = `reports/${scan.projectId}/${scan._id}/report-${Date.now()}.${ext}`;
+      await storage.putObject(storageKey, content, contentType, {
+        scanId: scan._id.toString(),
+        projectId: scan.projectId.toString(),
+        format,
+      });
+      storageUrl = await storage.getPresignedUrl(storageKey, 86400);
+    } catch {
+      // Storage upload optional fallback
     }
 
     const report = await ReportModel.create({
-      scanId: scan._id, projectId: scan.projectId, targetId: scan.targetId,
-      format, title: reportTitle, generatedAt: new Date(), scope, summary, content,
+      scanId: scan._id,
+      projectId: scan.projectId,
+      targetId: scan.targetId,
+      format,
+      title: reportTitle,
+      generatedAt: new Date(),
+      scope,
+      summary,
+      content,
+      storageKey,
+      storageUrl,
     });
 
     res.status(201).json({ data: report });

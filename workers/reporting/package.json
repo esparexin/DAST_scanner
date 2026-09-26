@@ -17,7 +17,8 @@
     "@securityscan/contracts": "workspace:*",
     "@securityscan/shared": "workspace:*",
     "@securityscan/database": "workspace:*",
-    "@securityscan/reporting": "workspace:*"
+    "@securityscan/reporting": "workspace:*",
+    "@securityscan/storage": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

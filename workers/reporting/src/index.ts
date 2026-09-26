@@ -1,11 +1,15 @@
 import { ScanModel, TargetModel, FindingModel, ReportModel } from '@securityscan/database';
 import { ReportFormat, ScanStatus } from '@securityscan/contracts';
-import { ReportGenerator } from '@securityscan/reporting';
+import { ReportGenerator, SarifGenerator } from '@securityscan/reporting';
+import { createStorageProvider, type StorageProvider } from '@securityscan/storage';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('worker-reporting');
 
-export async function runReportingWorker(scanId: string): Promise<string> {
+export async function runReportingWorker(
+  scanId: string,
+  options?: { format?: ReportFormat; storageProvider?: StorageProvider },
+): Promise<string> {
   const scan = await ScanModel.findById(scanId);
   if (!scan) throw new Error('Scan not found');
 
@@ -13,9 +17,12 @@ export async function runReportingWorker(scanId: string): Promise<string> {
   if (!target) throw new Error('Target not found');
 
   const allFindings = await FindingModel.find({ scanId: scan._id });
-  const reportGen = new ReportGenerator();
-  const summary = reportGen.generateSummary(allFindings.map((f) => f.toObject() as any));
+  const findingsObj = allFindings.map((f) => f.toObject() as any);
 
+  const reportGen = new ReportGenerator();
+  const summary = reportGen.generateSummary(findingsObj);
+
+  const format = options?.format ?? ReportFormat.JSON;
   const title = `Security Scan Report - ${target.name}`;
   const scope = {
     targetUrl: target.baseUrl,
@@ -26,24 +33,70 @@ export async function runReportingWorker(scanId: string): Promise<string> {
     completedAt: new Date(),
   };
 
-  const content = reportGen.generateJSON({
-    title,
-    scope,
-    findings: allFindings.map((f) => f.toObject() as any),
-    generatedAt: new Date(),
-  });
+  let content: string;
+  let contentType: string;
+  let ext: string;
+
+  if (format === ReportFormat.SARIF) {
+    const sarifGen = new SarifGenerator();
+    content = sarifGen.generate(findingsObj, target.baseUrl);
+    contentType = 'application/sarif+json';
+    ext = 'sarif';
+  } else if (format === ReportFormat.HTML) {
+    content = reportGen.generateHTML({
+      title,
+      scope,
+      findings: findingsObj,
+      generatedAt: new Date(),
+    });
+    contentType = 'text/html';
+    ext = 'html';
+  } else {
+    content = reportGen.generateJSON({
+      title,
+      scope,
+      findings: findingsObj,
+      generatedAt: new Date(),
+    });
+    contentType = 'application/json';
+    ext = 'json';
+  }
 
   const report = await ReportModel.create({
     scanId: scan._id,
     projectId: scan.projectId,
     targetId: scan.targetId,
-    format: ReportFormat.JSON,
+    format,
     title,
     generatedAt: new Date(),
     scope,
     summary,
     content,
   });
+
+  // Upload report to object storage
+  try {
+    const storage = options?.storageProvider ?? createStorageProvider();
+    const storageKey = `reports/${scan.projectId}/${scan._id}/report-${report._id}.${ext}`;
+    const uploadResult = await storage.putObject(storageKey, content, contentType, {
+      scanId: scan._id.toString(),
+      projectId: scan.projectId.toString(),
+      format,
+    });
+    const presignedUrl = await storage.getPresignedUrl(storageKey, 86400);
+
+    report.storageKey = storageKey;
+    report.storageUrl = presignedUrl;
+    report.filePath = uploadResult.url ?? storageKey;
+    await report.save();
+
+    logger.info({ scanId, reportId: report._id, storageKey }, 'Report uploaded to object storage');
+  } catch (storageErr: any) {
+    logger.warn(
+      { scanId, reportId: report._id, err: storageErr?.message },
+      'Failed to upload report to storage provider; using database copy',
+    );
+  }
 
   await ScanModel.findByIdAndUpdate(scanId, {
     status: ScanStatus.COMPLETED,

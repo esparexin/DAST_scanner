@@ -11,6 +11,8 @@ export interface IEvidence {
   timestamp: Date;
   relevantHeaders: Record<string, string>;
   relevantResponseData: string;
+  storageKey?: string;
+  storageUrl?: string;
   createdAt: Date;
 }
 

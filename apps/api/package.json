@@ -25,6 +25,7 @@
     "@securityscan/reporting": "workspace:*",
     "@securityscan/openapi": "workspace:*",
     "@securityscan/payload-engine": "workspace:*",
+    "@securityscan/storage": "workspace:*",
     "express": "^4.19.0",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",

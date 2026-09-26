@@ -18,7 +18,8 @@
     "@securityscan/shared": "workspace:*",
     "@securityscan/database": "workspace:*",
     "@securityscan/evidence-engine": "workspace:*",
-    "@securityscan/ai": "workspace:*"
+    "@securityscan/ai": "workspace:*",
+    "@securityscan/storage": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

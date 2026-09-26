@@ -12,6 +12,8 @@ export interface IReport {
   summary: IReportSummary;
   content?: string;
   filePath?: string;
+  storageKey?: string;
+  storageUrl?: string;
   createdAt: Date;
 }
 
