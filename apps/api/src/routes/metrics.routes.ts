@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { scanMetrics } from '@securityscan/metrics';
 
-export const metricsRoutes = Router();
+export const metricsRouter = Router();
+export const metricsRoutes = metricsRouter;
 
-metricsRoutes.get('/', (_req, res) => {
+metricsRouter.get('/', (_req, res) => {
   res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
   res.send(scanMetrics.export());
 });

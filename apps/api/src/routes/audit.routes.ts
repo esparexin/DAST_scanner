@@ -3,7 +3,8 @@ import { AuditLogModel } from '@securityscan/database';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('audit-routes');
-export const auditRoutes = Router();
+export const auditRouter = Router();
+export const auditRoutes = auditRouter;
 
 // In-memory fallback if MongoDB is not connected
 const fallbackLogs = [
@@ -28,7 +29,7 @@ const fallbackLogs = [
 ];
 
 // GET /api/audit - List audit events
-auditRoutes.get('/', async (req: Request, res: Response) => {
+auditRouter.get('/', async (req: Request, res: Response) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 50, 100);
     const action = req.query.action as string | undefined;
@@ -52,7 +53,7 @@ auditRoutes.get('/', async (req: Request, res: Response) => {
 });
 
 // POST /api/audit - Record an audit event
-auditRoutes.post('/', async (req: Request, res: Response) => {
+auditRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { userId, action, resource, resourceId, details } = req.body;
     if (!action || !resource) {
