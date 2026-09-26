@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "dev:api": "pnpm --filter @securityscan/api dev",
+    "dev:worker": "pnpm --filter @securityscan/worker-orchestrator dev",
     "dev:web": "pnpm --filter @securityscan/web dev",
     "seed": "tsx scripts/seed.ts"
   },

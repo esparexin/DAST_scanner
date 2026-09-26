@@ -1,5 +1,5 @@
 import { Worker, type Job } from 'bullmq';
-import { connectDatabase } from '@securityscan/database';
+import { connectDatabase, disconnectDatabase } from '@securityscan/database';
 import { SCAN_QUEUE_NAME, getRedisConnectionOptions } from '@securityscan/scanner-core';
 import { createLogger } from '@securityscan/shared';
 import { scanMetrics } from '@securityscan/metrics';
@@ -7,7 +7,7 @@ import { processScan } from './scan-processor.js';
 
 const logger = createLogger('scan-worker');
 
-async function main() {
+export async function startWorker(): Promise<Worker> {
   await connectDatabase();
   logger.info('Worker connected to MongoDB');
 
@@ -37,10 +37,31 @@ async function main() {
     logger.error({ jobId: job?.id, error: error.message }, 'Scan job failed');
   });
 
+  const shutdown = async (signal: string) => {
+    logger.info({ signal }, 'Shutting down worker gracefully...');
+    try {
+      await worker.close();
+      logger.info('BullMQ worker closed');
+      await disconnectDatabase();
+      logger.info('Database disconnected');
+      process.exit(0);
+    } catch (err) {
+      logger.error(err, 'Error during worker shutdown');
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+
   logger.info('Scan worker started, waiting for jobs...');
+  return worker;
 }
 
-main().catch((err) => {
-  logger.fatal(err, 'Worker failed to start');
-  process.exit(1);
-});
+if (process.env['NODE_ENV'] !== 'test') {
+  startWorker().catch((err) => {
+    logger.fatal(err, 'Worker failed to start');
+    process.exit(1);
+  });
+}
+
