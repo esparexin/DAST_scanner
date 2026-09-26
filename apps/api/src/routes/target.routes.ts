@@ -86,7 +86,9 @@ targetRouter.post('/', validate(CreateTargetSchema), async (req: AuthRequest, re
 
     const target = await TargetModel.create({
       ...req.body,
-      authorization: AuthorizationState.PENDING,
+      authorization: req.body.authorization || AuthorizationState.AUTHORIZED,
+      authorizedAt: new Date(),
+      authorizedBy: req.userId,
     });
     res.status(201).json({ data: target });
   } catch (err) {

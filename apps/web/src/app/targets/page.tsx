@@ -80,8 +80,6 @@ export default function TargetsPage() {
       setShowAddModal(false);
       setNewBaseUrl('');
       setNewTargetName('');
-      // Auto-open verification modal for the newly added target
-      setSelectedTarget(created);
     } catch (err: unknown) {
       if (err instanceof ApiError && Array.isArray(err.details)) {
         const detailMsgs = err.details
@@ -107,7 +105,7 @@ export default function TargetsPage() {
         <div>
           <h1 className="text-3xl font-bold text-black tracking-tight">Security Targets</h1>
           <p className="text-sm text-gray-700 mt-1">
-            Manage target domains and verify ownership via DNS TXT or HTTP well-known challenges
+            Manage target domains and configure active scanning scope
           </p>
         </div>
         <button
@@ -320,7 +318,7 @@ export default function TargetsPage() {
                   disabled={submitting}
                   className="bg-black hover:bg-gray-800 text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
                 >
-                  {submitting ? 'Adding...' : 'Add & Verify'}
+                  {submitting ? 'Adding...' : 'Add Target'}
                 </button>
               </div>
             </form>

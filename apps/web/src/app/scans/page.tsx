@@ -244,7 +244,7 @@ export default function ScansPage() {
                 >
                   {targets.map((t) => (
                     <option key={t._id} value={t._id}>
-                      {t.name ? `${t.name} (${t.baseUrl})` : t.baseUrl} [{t.authorization || 'PENDING'}]
+                      {t.name ? `${t.name} (${t.baseUrl})` : t.baseUrl}
                     </option>
                   ))}
                 </select>
@@ -267,16 +267,6 @@ export default function ScansPage() {
               </select>
             </div>
           </div>
-
-          {selectedTarget && selectedTarget.authorization !== 'AUTHORIZED' && (
-            <div className="mt-3 bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-900 font-medium">
-              <span className="font-bold">Target Pending Authorization:</span> This target has not completed DNS/HTTP ownership verification yet. You can run in <strong>Dry-Run Mode</strong> to validate scope and configuration without sending exploits, or verify ownership on the{' '}
-              <Link href="/targets" className="underline font-bold text-black">
-                Targets page
-              </Link>{' '}
-              before executing active scans.
-            </div>
-          )}
 
           <div className="mt-3 flex items-center">
             <input
