@@ -1,11 +1,12 @@
 import type { Response, NextFunction } from 'express';
 import { MembershipModel, OrganizationModel } from '@securityscan/database';
-import { OrgRole } from '@securityscan/contracts';
+import { OrgRole, SubscriptionTier } from '@securityscan/contracts';
 import type { AuthRequest } from './auth.js';
 
 export interface TenantRequest extends AuthRequest {
   organizationId?: string;
   orgRole?: OrgRole;
+  orgTier?: SubscriptionTier;
 }
 
 /**
@@ -55,8 +56,10 @@ export async function resolveTenant(
       }
     }
 
+    const org = await OrganizationModel.findById(membership.organizationId);
     req.organizationId = membership.organizationId.toString();
     req.orgRole = membership.role as OrgRole;
+    req.orgTier = (org?.tier as SubscriptionTier) ?? SubscriptionTier.FREE;
     next();
   } catch (error) {
     next(error);

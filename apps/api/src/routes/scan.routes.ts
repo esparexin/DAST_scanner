@@ -5,15 +5,19 @@ import {
   ScanStatus,
   AuthorizationState,
   SCAN_STATE_TRANSITIONS,
+  SubscriptionTier,
 } from '@securityscan/contracts';
 import { ScopeGuard } from '@securityscan/scope';
 import { SCAN_EVENTS_CHANNEL, createRedisClient } from '@securityscan/scanner-core';
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
+import { resolveTenant, type TenantRequest } from '../middleware/tenant.js';
 import { validate } from '../middleware/validate.js';
 import { enqueueScan } from '../services/queue.service.js';
+import { checkScanQuota } from '../services/quota.service.js';
 
 export const scanRouter = Router();
 scanRouter.use(authenticate);
+scanRouter.use(resolveTenant as any);
 
 scanRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
@@ -70,6 +74,24 @@ scanRouter.post('/', validate(CreateScanSchema), async (req: AuthRequest, res, n
         error: {
           code: 'SCOPE_VIOLATION',
           message: 'Target is not authorized. Set authorization to AUTHORIZED before scanning.',
+        },
+      });
+      return;
+    }
+
+    // ENFORCE: Subscription plan quota & tier limits
+    const quotaCheck = await checkScanQuota(
+      req.userId!,
+      (req as TenantRequest).orgTier ?? SubscriptionTier.FREE,
+      profile,
+    );
+    if (!quotaCheck.allowed) {
+      const statusCode = quotaCheck.code === 'PROFILE_NOT_ALLOWED' ? 403 : 429;
+      res.status(statusCode).json({
+        error: {
+          code: quotaCheck.code ?? 'QUOTA_EXCEEDED',
+          message: quotaCheck.message,
+          details: quotaCheck.details,
         },
       });
       return;

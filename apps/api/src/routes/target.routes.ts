@@ -1,13 +1,23 @@
 import { Router } from 'express';
 import dns from 'node:dns/promises';
 import { TargetModel, ProjectModel, AuditLogModel } from '@securityscan/database';
-import { CreateTargetSchema, UpdateTargetSchema, AuthorizationState, AuditAction, TargetVerificationMethod } from '@securityscan/contracts';
+import {
+  CreateTargetSchema,
+  UpdateTargetSchema,
+  AuthorizationState,
+  AuditAction,
+  TargetVerificationMethod,
+  SubscriptionTier,
+} from '@securityscan/contracts';
 import { TargetOwnershipVerifier } from '@securityscan/scope';
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
+import { resolveTenant, type TenantRequest } from '../middleware/tenant.js';
 import { validate } from '../middleware/validate.js';
+import { checkTargetQuota } from '../services/quota.service.js';
 
 export const targetRouter = Router();
 targetRouter.use(authenticate);
+targetRouter.use(resolveTenant as any);
 
 targetRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
@@ -53,6 +63,23 @@ targetRouter.post('/', validate(CreateTargetSchema), async (req: AuthRequest, re
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
       return;
     }
+
+    // Enforce target limit per subscription tier
+    const quotaCheck = await checkTargetQuota(
+      req.userId!,
+      (req as TenantRequest).orgTier ?? SubscriptionTier.FREE,
+    );
+    if (!quotaCheck.allowed) {
+      res.status(403).json({
+        error: {
+          code: quotaCheck.code ?? 'QUOTA_EXCEEDED',
+          message: quotaCheck.message,
+          details: quotaCheck.details,
+        },
+      });
+      return;
+    }
+
     const target = await TargetModel.create({
       ...req.body,
       authorization: AuthorizationState.PENDING,
