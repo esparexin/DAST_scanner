@@ -5,8 +5,13 @@ import type {
   Confidence,
 } from '../enums.js';
 
+export type RuleStatus = 'DRAFT' | 'ACTIVE' | 'DEPRECATED' | 'DISABLED';
+
 export interface ISecurityRule {
   id: string;
+  ruleVersion?: string;
+  contentHash?: string;
+  status?: RuleStatus;
   name: string;
   description: string;
   category: DetectionCategory;
@@ -25,4 +30,7 @@ export interface ISecurityRule {
   references: string[];
   enabled: boolean;
   tags: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  deprecatedAt?: string;
 }

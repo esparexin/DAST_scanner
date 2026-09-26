@@ -1,1 +1,1 @@
-export { SecurityRuleRegistry, PASSIVE_RULES, ACTIVE_RULES } from './registry.js';
+export { SecurityRuleRegistry, PASSIVE_RULES, ACTIVE_RULES, computeRuleHash } from './registry.js';
