@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: securityscan-config
+  namespace: securityscan
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  MAX_CONCURRENT_SCANS: "5"
+  STORAGE_PROVIDER: "s3"
+  S3_ENDPOINT: "https://s3.amazonaws.com"
+  S3_REGION: "us-east-1"
+  S3_BUCKET: "securityscan-evidence-production"
+  PORT: "3001"

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: securityscan
+  labels:
+    app.kubernetes.io/name: securityscan
+    app.kubernetes.io/part-of: dast-security-platform

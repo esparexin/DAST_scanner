@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: securityscan-worker
+  namespace: securityscan
+  labels:
+    app.kubernetes.io/name: securityscan-worker
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: securityscan-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: securityscan-worker
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/esparexin/dast_scanner/worker:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: securityscan-config
+            - secretRef:
+                name: securityscan-secrets
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: securityscan-worker-hpa
+  namespace: securityscan
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: securityscan-worker
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

@@ -19,6 +19,8 @@ COPY packages/risk-engine/package.json packages/risk-engine/
 COPY packages/verification-engine/package.json packages/verification-engine/
 COPY packages/scanner-core/package.json packages/scanner-core/
 COPY packages/crawler/package.json packages/crawler/
+COPY packages/database/package.json packages/database/
+COPY packages/storage/package.json packages/storage/
 COPY checks/injection/package.json checks/injection/
 COPY checks/xss/package.json checks/xss/
 COPY checks/path-traversal/package.json checks/path-traversal/

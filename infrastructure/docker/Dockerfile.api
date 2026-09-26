@@ -21,6 +21,7 @@ COPY packages/verification-engine/package.json packages/verification-engine/
 COPY packages/scanner-core/package.json packages/scanner-core/
 COPY packages/reporting/package.json packages/reporting/
 COPY packages/crawler/package.json packages/crawler/
+COPY packages/storage/package.json packages/storage/
 COPY apps/api/package.json apps/api/
 RUN pnpm install --frozen-lockfile --prod=false
 
