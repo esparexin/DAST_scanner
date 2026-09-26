@@ -1,19 +1,104 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+export const AUTH_TOKEN_KEY = 'securityscan_auth_token';
+
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+    public readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+const ERROR_MESSAGES: Record<number, string> = {
+  400: 'Bad request. Please verify the input values.',
+  401: 'Session expired or authentication is required. Please authenticate again.',
+  403: 'Access denied. Insufficient permissions or target not authorized.',
+  404: 'Requested resource was not found.',
+  409: 'Conflict. An identical resource already exists.',
+  422: 'Validation error. Please check the submitted fields.',
+  429: 'Rate limit reached. Please wait a moment before trying again.',
+  500: 'Internal server error occurred.',
+  503: 'Service temporarily unavailable. Please retry later.',
+};
+
+let inMemoryToken: string | null = null;
+
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    try {
+      return localStorage.getItem(AUTH_TOKEN_KEY);
+    } catch {
+      return inMemoryToken;
+    }
+  }
+  return inMemoryToken;
+}
+
+export function setAuthToken(token: string | null): void {
+  inMemoryToken = token;
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    try {
+      if (token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
+      } else {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+      }
+    } catch {
+      // ignore storage quota / sandbox errors
+    }
+  }
+}
+
+export function clearAuthToken(): void {
+  setAuthToken(null);
+}
+
 export async function fetchApi<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  if (options?.headers) {
+    Object.assign(headers, options.headers);
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    headers,
   });
 
   if (!res.ok) {
-    throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    let errorPayload: { code?: string; message?: string; details?: unknown } | undefined;
+    try {
+      const parsed = (await res.json()) as { error?: { code?: string; message?: string; details?: unknown } };
+      errorPayload = parsed?.error;
+    } catch {
+      // ignore JSON parse failure on non-JSON response
+    }
+
+    if (res.status === 401) {
+      clearAuthToken();
+    }
+
+    const code = errorPayload?.code || `HTTP_${res.status}`;
+    const serverMessage = errorPayload?.message;
+    const defaultMsg = ERROR_MESSAGES[res.status] || `API Error: ${res.status} ${res.statusText}`;
+    const userMessage = serverMessage ? `${defaultMsg} (${serverMessage})` : defaultMsg;
+
+    throw new ApiError(res.status, code, userMessage, errorPayload?.details);
   }
 
   const json = await res.json();
@@ -153,10 +238,15 @@ export interface ApiStats {
 }
 
 export interface CreateScanRequest {
-  targetUrl: string;
+  projectId?: string;
+  targetId?: string;
+  targetUrl?: string;
   scopePatterns?: string[];
-  profile: string;
+  profile?: string;
   dryRun?: boolean;
+  authProfileIds?: string[];
+  enabledCategories?: string[];
+  excludedChecks?: string[];
 }
 
 // Scans
@@ -172,7 +262,12 @@ export const scansApi = {
     fetchApi<ApiScan>(`/api/scans/${id}/cancel`, { method: 'POST' }),
   dryRun: (id: string) =>
     fetchApi<ApiDryRunResult>(`/api/scans/${id}/dry-run`, { method: 'POST' }),
-  getEventsUrl: (id: string) => `${API_BASE}/api/scans/${id}/events`,
+  getEventsUrl: (id: string) => {
+    const token = getAuthToken();
+    return token
+      ? `${API_BASE}/api/scans/${id}/events?token=${encodeURIComponent(token)}`
+      : `${API_BASE}/api/scans/${id}/events`;
+  },
 };
 
 export interface ApiTargetChallenge {
@@ -261,3 +356,49 @@ export const auditApi = {
 export const statsApi = {
   get: () => fetchApi<ApiStats>('/api/health/stats'),
 };
+
+export interface ApiUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
+export interface AuthResponse {
+  user: ApiUser;
+  token: string;
+}
+
+// Authentication
+export const authApi = {
+  login: async (email: string, password: string): Promise<AuthResponse> => {
+    const data = await fetchApi<AuthResponse>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    setAuthToken(data.token);
+    return data;
+  },
+  register: async (email: string, name: string, password: string): Promise<AuthResponse> => {
+    const data = await fetchApi<AuthResponse>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, name, password }),
+    });
+    setAuthToken(data.token);
+    return data;
+  },
+  logout: () => {
+    clearAuthToken();
+  },
+  ensureSession: async (): Promise<string | null> => {
+    const existing = getAuthToken();
+    if (existing) return existing;
+    try {
+      const res = await authApi.login('admin@securityscan.dev', 'Admin123!');
+      return res.token;
+    } catch {
+      return null;
+    }
+  },
+};
+

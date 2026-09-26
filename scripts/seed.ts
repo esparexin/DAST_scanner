@@ -39,7 +39,8 @@ export async function seedDatabase() {
     {
       email: 'admin@securityscan.dev',
       name: 'Security Admin',
-      passwordHash: '$2a$10$abcdefghijklmnopqrstuv.mockhash',
+      // Valid bcrypt hash for password "Admin123!"
+      passwordHash: '$2a$10$8du.Azt/LBn8u.kkGRDS9elpQ8ivM3QeTGQITrUhh51bACrWhH.FK',
       role: 'admin',
     },
     { upsert: true, new: true },

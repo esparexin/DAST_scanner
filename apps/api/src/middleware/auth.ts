@@ -8,20 +8,26 @@ export interface AuthRequest extends Request {
 }
 
 export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
+  let token: string | undefined;
   const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  if (header?.startsWith('Bearer ')) {
+    token = header.slice(7);
+  } else if (typeof req.query['token'] === 'string' && req.query['token'].trim()) {
+    token = req.query['token'].trim();
+  }
+
+  if (!token) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Missing token' } });
     return;
   }
 
   try {
-    const token = header.slice(7);
     const decoded = jwt.verify(token, JWT_SECRET) as { sub: string; role: string };
     req.userId = decoded.sub;
     req.userRole = decoded.role;
     next();
   } catch {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } });
   }
 }
 
