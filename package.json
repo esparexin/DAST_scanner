@@ -10,6 +10,7 @@
     "test": "vitest run --passWithNoTests",
     "test:unit": "pnpm -r test:unit",
     "test:e2e": "pnpm --filter @securityscan/tests-security-lab test",
+    "test:e2e:scan": "tsx scripts/run-e2e-scan.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
