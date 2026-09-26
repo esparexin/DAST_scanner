@@ -5,6 +5,8 @@ import {
   ScanProfile,
   WebhookEvent,
   WebhookFormat,
+  ScheduleFrequency,
+  SCHEDULE_CRON_PATTERNS,
 } from '../enums.js';
 import { SCAN_STATE_TRANSITIONS } from '../types/scan.js';
 
@@ -105,5 +107,20 @@ describe('WebhookEvent and WebhookFormat', () => {
     expect(WebhookFormat.GENERIC).toBe('GENERIC');
     expect(WebhookFormat.SLACK).toBe('SLACK');
     expect(WebhookFormat.DISCORD).toBe('DISCORD');
+  });
+});
+
+describe('ScheduleFrequency and SCHEDULE_CRON_PATTERNS', () => {
+  it('has expected frequency options', () => {
+    expect(ScheduleFrequency.DAILY).toBe('DAILY');
+    expect(ScheduleFrequency.WEEKLY).toBe('WEEKLY');
+    expect(ScheduleFrequency.MONTHLY).toBe('MONTHLY');
+    expect(ScheduleFrequency.CUSTOM).toBe('CUSTOM');
+  });
+
+  it('maps standard frequencies to valid 5-part cron patterns', () => {
+    expect(SCHEDULE_CRON_PATTERNS[ScheduleFrequency.DAILY]).toBe('0 0 * * *');
+    expect(SCHEDULE_CRON_PATTERNS[ScheduleFrequency.WEEKLY]).toBe('0 0 * * 0');
+    expect(SCHEDULE_CRON_PATTERNS[ScheduleFrequency.MONTHLY]).toBe('0 0 1 * *');
   });
 });

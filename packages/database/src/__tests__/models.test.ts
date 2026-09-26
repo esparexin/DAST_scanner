@@ -7,6 +7,7 @@ import { ProjectModel } from '../models/project.model.js';
 import { TargetModel } from '../models/target.model.js';
 import { FindingModel } from '../models/finding.model.js';
 import { WebhookSubscriptionModel } from '../models/webhook-subscription.model.js';
+import { ScanScheduleModel } from '../models/scan-schedule.model.js';
 import {
   AuthorizationState,
   TargetEnvironment,
@@ -16,6 +17,7 @@ import {
   DetectionCategory,
   WebhookEvent,
   WebhookFormat,
+  ScheduleFrequency,
 } from '@securityscan/contracts';
 
 describe('Database Models Schema Validation', () => {
@@ -105,5 +107,20 @@ describe('Database Models Schema Validation', () => {
     expect(error).toBeUndefined();
     expect(webhook.enabled).toBe(true);
     expect(webhook.format).toBe('SLACK');
+  });
+
+  it('validates ScanSchedule model schema requirements', async () => {
+    const schedule = new ScanScheduleModel({
+      organizationId: new mongoose.Types.ObjectId(),
+      projectId: new mongoose.Types.ObjectId(),
+      targetId: new mongoose.Types.ObjectId(),
+      name: 'Daily Production Audit',
+      cron: '0 2 * * *',
+      frequency: ScheduleFrequency.DAILY,
+    });
+    const error = schedule.validateSync();
+    expect(error).toBeUndefined();
+    expect(schedule.enabled).toBe(true);
+    expect(schedule.profile).toBe('WEB_STANDARD');
   });
 });

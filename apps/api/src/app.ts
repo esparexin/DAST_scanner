@@ -16,6 +16,7 @@ import { metricsRoutes } from './routes/metrics.routes.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { intelligenceRouter } from './routes/intelligence.routes.js';
 import { webhookRouter } from './routes/webhook.routes.js';
+import { scheduleRouter } from './routes/schedule.routes.js';
 import { apiRateLimiter } from './middleware/rate-limiter.js';
 import { tracingMiddleware } from './middleware/tracing.js';
 import { httpMetricsMiddleware } from './middleware/metrics.js';
@@ -50,6 +51,7 @@ export function createApp() {
   app.use('/api/audit', auditRoutes);
   app.use('/api/admin/intelligence', intelligenceRouter);
   app.use('/api/webhooks', webhookRouter);
+  app.use('/api/schedules', scheduleRouter);
 
   // Error handling
   app.use(errorHandler);

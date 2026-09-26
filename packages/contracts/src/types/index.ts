@@ -15,3 +15,4 @@ export * from './audit.js';
 export * from './organization.js';
 export * from './intelligence-manifest.js';
 export * from './webhook.js';
+export * from './schedule.js';

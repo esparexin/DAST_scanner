@@ -246,3 +246,18 @@ export enum WebhookFormat {
   SLACK = 'SLACK',
   DISCORD = 'DISCORD',
 }
+
+// === Scheduling ===
+
+export enum ScheduleFrequency {
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  MONTHLY = 'MONTHLY',
+  CUSTOM = 'CUSTOM',
+}
+
+export const SCHEDULE_CRON_PATTERNS: Record<Exclude<ScheduleFrequency, ScheduleFrequency.CUSTOM>, string> = {
+  [ScheduleFrequency.DAILY]: '0 0 * * *',
+  [ScheduleFrequency.WEEKLY]: '0 0 * * 0',
+  [ScheduleFrequency.MONTHLY]: '0 0 1 * *',
+};

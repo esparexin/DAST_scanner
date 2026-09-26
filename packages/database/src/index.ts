@@ -16,3 +16,4 @@ export { AuditLogModel } from './models/audit-log.model.js';
 export { ScanJobModel } from './models/scan-job.model.js';
 export { IntelligenceReleaseModel, type IntelligenceReleaseStatus } from './models/intelligence-release.model.js';
 export { WebhookSubscriptionModel, type IWebhookSubscriptionDocument } from './models/webhook-subscription.model.js';
+export { ScanScheduleModel, type IScanScheduleDocument } from './models/scan-schedule.model.js';
