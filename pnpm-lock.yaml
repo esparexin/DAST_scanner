@@ -53,6 +53,9 @@ importers:
       '@securityscan/openapi':
         specifier: workspace:*
         version: link:../../packages/openapi
+      '@securityscan/payload-engine':
+        specifier: workspace:*
+        version: link:../../packages/payload-engine
       '@securityscan/reporting':
         specifier: workspace:*
         version: link:../../packages/reporting

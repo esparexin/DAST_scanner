@@ -14,3 +14,4 @@ export { ApiSchemaModel } from './models/api-schema.model.js';
 export { ReportModel } from './models/report.model.js';
 export { AuditLogModel } from './models/audit-log.model.js';
 export { ScanJobModel } from './models/scan-job.model.js';
+export { IntelligenceReleaseModel, type IntelligenceReleaseStatus } from './models/intelligence-release.model.js';
