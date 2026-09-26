@@ -1,6 +1,6 @@
 import { Worker, type Job } from 'bullmq';
 import { connectDatabase } from '@securityscan/database';
-import { SCAN_QUEUE_NAME } from '@securityscan/scanner-core';
+import { SCAN_QUEUE_NAME, getRedisConnectionOptions } from '@securityscan/scanner-core';
 import { createLogger } from '@securityscan/shared';
 import { processScan } from './scan-processor.js';
 
@@ -17,11 +17,8 @@ async function main() {
       await processScan(job.data.scanId as string);
     },
     {
-      connection: {
-        host: process.env['REDIS_HOST'] ?? 'localhost',
-        port: parseInt(process.env['REDIS_PORT'] ?? '6379', 10),
-      },
-      concurrency: 2,
+      connection: getRedisConnectionOptions(),
+      concurrency: parseInt(process.env['MAX_CONCURRENT_SCANS'] ?? '2', 10),
     },
   );
 

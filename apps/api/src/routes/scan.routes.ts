@@ -7,6 +7,7 @@ import {
   SCAN_STATE_TRANSITIONS,
 } from '@securityscan/contracts';
 import { ScopeGuard } from '@securityscan/scope';
+import { SCAN_EVENTS_CHANNEL, createRedisClient } from '@securityscan/scanner-core';
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { enqueueScan } from '../services/queue.service.js';
@@ -196,3 +197,75 @@ scanRouter.post('/:id/dry-run', async (req: AuthRequest, res, next) => {
     next(err);
   }
 });
+
+// SSE endpoint for live scan progress streaming
+scanRouter.get('/:id/events', async (req: AuthRequest, res, next) => {
+  try {
+    const scan = await ScanModel.findById(req.params['id']);
+    if (!scan) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Scan not found' } });
+      return;
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+
+    // Send initial snapshot
+    res.write(
+      `data: ${JSON.stringify({
+        scanId: scan._id.toString(),
+        phase: scan.status,
+        timestamp: new Date().toISOString(),
+        progress: scan.progress,
+      })}\n\n`,
+    );
+
+    if (
+      scan.status === ScanStatus.COMPLETED ||
+      scan.status === ScanStatus.FAILED ||
+      scan.status === ScanStatus.CANCELLED
+    ) {
+      res.end();
+      return;
+    }
+
+    const subscriber = createRedisClient();
+    await subscriber.connect().catch(() => {});
+
+    const onMessage = (_channel: string, message: string) => {
+      try {
+        const event = JSON.parse(message);
+        if (event.scanId === scan._id.toString()) {
+          res.write(`data: ${message}\n\n`);
+          if (
+            event.phase === ScanStatus.COMPLETED ||
+            event.phase === ScanStatus.FAILED ||
+            event.phase === ScanStatus.CANCELLED
+          ) {
+            cleanup();
+            res.end();
+          }
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    const cleanup = () => {
+      subscriber.off('message', onMessage);
+      subscriber.unsubscribe(SCAN_EVENTS_CHANNEL).catch(() => {});
+      subscriber.quit().catch(() => {});
+    };
+
+    subscriber.on('message', onMessage);
+    await subscriber.subscribe(SCAN_EVENTS_CHANNEL);
+
+    req.on('close', cleanup);
+  } catch (err) {
+    next(err);
+  }
+});
+

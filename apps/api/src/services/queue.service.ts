@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { SCAN_QUEUE_NAME } from '@securityscan/scanner-core';
+import { SCAN_QUEUE_NAME, getRedisConnectionOptions } from '@securityscan/scanner-core';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('queue-service');
@@ -9,10 +9,7 @@ let scanQueue: Queue | null = null;
 function getQueue(): Queue {
   if (!scanQueue) {
     scanQueue = new Queue(SCAN_QUEUE_NAME, {
-      connection: {
-        host: process.env['REDIS_HOST'] ?? 'localhost',
-        port: parseInt(process.env['REDIS_PORT'] ?? '6379', 10),
-      },
+      connection: getRedisConnectionOptions(),
     });
   }
   return scanQueue;

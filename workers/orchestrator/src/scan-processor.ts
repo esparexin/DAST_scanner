@@ -7,7 +7,12 @@ import type { AIProvider } from '@securityscan/ai';
 import { EvidenceCollector } from '@securityscan/evidence-engine';
 import { RiskClassifier } from '@securityscan/risk-engine';
 import { SecurityKnowledgeBase } from '@securityscan/knowledge-base';
-import { ScanStateMachine } from '@securityscan/scanner-core';
+import {
+  ScanStateMachine,
+  SCAN_EVENTS_CHANNEL,
+  createRedisClient,
+  formatScanProgressEvent,
+} from '@securityscan/scanner-core';
 import {
   PayloadRegistry,
   ReflectionContextAnalyzer,
@@ -52,6 +57,31 @@ import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('scan-processor');
 
+let redisPublisher: ReturnType<typeof createRedisClient> | null = null;
+function getPublisher() {
+  if (!redisPublisher) {
+    redisPublisher = createRedisClient();
+    redisPublisher.connect().catch((err: unknown) => {
+      logger.warn({ err }, 'Failed to connect Redis publisher for scan events');
+    });
+  }
+  return redisPublisher;
+}
+
+async function emitProgress(
+  scanId: string,
+  phase: ScanStatus,
+  extra?: { message?: string; endpointsDiscovered?: number; findingsTotal?: number; findingsConfirmed?: number },
+): Promise<void> {
+  try {
+    const pub = getPublisher();
+    const event = formatScanProgressEvent(scanId, phase, extra);
+    await pub.publish(SCAN_EVENTS_CHANNEL, JSON.stringify(event));
+  } catch (err: unknown) {
+    logger.warn({ scanId, phase, err }, 'Failed to publish scan progress event');
+  }
+}
+
 export interface ScanJob {
   scanId: string;
   targetUrl: string;
@@ -70,24 +100,91 @@ export async function processScan(scanId: string): Promise<void> {
       status: ScanStatus.FAILED,
       failureReason: 'Target is not AUTHORIZED for scanning',
     });
+    await emitProgress(scanId, ScanStatus.FAILED, { message: 'Target is not AUTHORIZED for scanning' });
     return;
   }
 
   try {
-    await ScanModel.findByIdAndUpdate(scanId, { status: ScanStatus.CRAWLING, startedAt: new Date() });
+    const checkCancelled = async () => {
+      const s = await ScanModel.findById(scanId);
+      if (s?.status === ScanStatus.CANCELLED) {
+        throw new Error('Scan cancelled by user');
+      }
+    };
+
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.CRAWLING,
+      startedAt: new Date(),
+      'progress.phase': ScanStatus.CRAWLING,
+    });
+    await emitProgress(scanId, ScanStatus.CRAWLING, { message: 'Crawler initiated' });
+
+    await checkCancelled();
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.PASSIVE_ANALYSIS,
+      'progress.phase': ScanStatus.PASSIVE_ANALYSIS,
+    });
+    await emitProgress(scanId, ScanStatus.PASSIVE_ANALYSIS, { message: 'Running passive security checks' });
     await processPassiveAnalysis(scanId);
+
+    await checkCancelled();
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.ACTIVE_TESTING,
+      'progress.phase': ScanStatus.ACTIVE_TESTING,
+    });
+    await emitProgress(scanId, ScanStatus.ACTIVE_TESTING, { message: 'Running active payload checks' });
     await runActiveTestingWorker(scanId);
+
+    await checkCancelled();
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.API_TESTING,
+      'progress.phase': ScanStatus.API_TESTING,
+    });
+    await emitProgress(scanId, ScanStatus.API_TESTING, { message: 'Running API security checks' });
     await runApiTestingWorker(scanId);
+
+    await checkCancelled();
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.VERIFYING,
+      'progress.phase': ScanStatus.VERIFYING,
+    });
+    await emitProgress(scanId, ScanStatus.VERIFYING, { message: 'Verifying findings' });
     await runVerificationWorker(scanId);
+
+    await checkCancelled();
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.EVIDENCE_COLLECTION,
+      'progress.phase': ScanStatus.EVIDENCE_COLLECTION,
+    });
+    await emitProgress(scanId, ScanStatus.EVIDENCE_COLLECTION, { message: 'Collecting proof and evidence' });
     await runEvidenceWorker(scanId);
+
+    await checkCancelled();
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.REPORTING,
+      'progress.phase': ScanStatus.REPORTING,
+    });
+    await emitProgress(scanId, ScanStatus.REPORTING, { message: 'Generating report' });
     await runReportingWorker(scanId);
-    await ScanModel.findByIdAndUpdate(scanId, { status: ScanStatus.COMPLETED, completedAt: new Date() });
+
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.COMPLETED,
+      'progress.phase': ScanStatus.COMPLETED,
+      completedAt: new Date(),
+    });
+    await emitProgress(scanId, ScanStatus.COMPLETED, { message: 'Scan finished successfully' });
   } catch (err: any) {
+    if (err?.message === 'Scan cancelled by user') {
+      logger.info({ scanId }, 'Scan terminated due to cancellation');
+      await emitProgress(scanId, ScanStatus.CANCELLED, { message: 'Scan cancelled by user' });
+      return;
+    }
     logger.error({ scanId, err }, 'Scan processing failed');
     await ScanModel.findByIdAndUpdate(scanId, {
       status: ScanStatus.FAILED,
       failureReason: err?.message ?? 'Internal scan execution error',
     });
+    await emitProgress(scanId, ScanStatus.FAILED, { message: err?.message ?? 'Internal scan execution error' });
   }
 }
 
