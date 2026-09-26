@@ -10,8 +10,8 @@ import {
   TargetModel,
   ScanModel,
 } from '@securityscan/database';
-import { createScanQueue } from '@securityscan/scanner-core';
 import { checkScanQuota } from './quota.service.js';
+import { enqueueScan } from './queue.service.js';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('schedule-service');
@@ -129,9 +129,8 @@ export async function executeScheduledScan(
       },
     });
 
-    // Enqueue scan in BullMQ scan jobs queue
-    const queue = createScanQueue();
-    await queue.add('scan-job', { scanId: scan._id.toString() });
+    // Enqueue scan through the SSOT queue service
+    await enqueueScan(scan._id.toString());
 
     // Update schedule timestamp
     await ScanScheduleModel.findByIdAndUpdate(scheduleId, {

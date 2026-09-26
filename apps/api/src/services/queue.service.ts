@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { SCAN_QUEUE_NAME, getRedisConnectionOptions } from '@securityscan/scanner-core';
+import { SCAN_QUEUE_NAME, SCAN_JOB_NAME, getRedisConnectionOptions } from '@securityscan/scanner-core';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('queue-service');
@@ -23,7 +23,7 @@ export async function enqueueScan(
     const queue = getQueue();
     const traceId = metadata?.traceId;
     await queue.add(
-      'scan',
+      SCAN_JOB_NAME,
       { scanId, traceId },
       {
         jobId: `scan-${scanId}`,

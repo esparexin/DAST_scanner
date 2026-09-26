@@ -36,3 +36,24 @@ jobs:
 
       - name: Build Monorepo (Packages, Apps, Workers, Checks)
         run: pnpm build
+
+      - name: Dependency Security Audit
+        run: pnpm audit --audit-level=high
+
+      - name: Verify JWT_SECRET SSOT (must only be read from config.ts)
+        run: |
+          COUNT=$(grep -rn "process.env\['JWT_SECRET'\]" apps/api/src --include="*.ts" | grep -v "config.ts" | wc -l | tr -d '[:space:]')
+          if [ "$COUNT" -gt "0" ]; then
+            echo "ERROR: JWT_SECRET read outside apps/api/src/config.ts ($COUNT occurrences)"
+            grep -rn "process.env\['JWT_SECRET'\]" apps/api/src --include="*.ts" | grep -v "config.ts"
+            exit 1
+          fi
+
+      - name: Verify queue job name consistency (no divergent 'scan-job' string)
+        run: |
+          COUNT=$(grep -rn "'scan-job'" apps/ workers/ --include="*.ts" | grep -v ".test.ts" | wc -l | tr -d '[:space:]')
+          if [ "$COUNT" -gt "0" ]; then
+            echo "ERROR: Divergent queue job name 'scan-job' found ($COUNT occurrences)"
+            grep -rn "'scan-job'" apps/ workers/ --include="*.ts" | grep -v ".test.ts"
+            exit 1
+          fi

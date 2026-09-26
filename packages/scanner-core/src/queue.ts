@@ -3,6 +3,9 @@ import type { ConnectionOptions } from 'bullmq';
 
 export const SCAN_QUEUE_NAME = 'scan-jobs';
 
+/** The BullMQ job name used for all scan jobs. Must match the Worker's job name processor. */
+export const SCAN_JOB_NAME = 'scan';
+
 export function getRedisConnectionOptions(connection?: ConnectionOptions): ConnectionOptions {
   if (connection) return connection;
   const redisUrl = process.env['REDIS_URL'];

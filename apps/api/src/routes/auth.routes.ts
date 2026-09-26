@@ -5,9 +5,7 @@ import { UserModel } from '@securityscan/database';
 import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 import { authRateLimiter } from '../middleware/rate-limiter.js';
-
-const JWT_SECRET = process.env['JWT_SECRET'] ?? 'change-me-in-production';
-const JWT_EXPIRES_IN = (process.env['JWT_EXPIRES_IN'] ?? '24h') as any;
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config.js';
 
 export const authRouter = Router();
 

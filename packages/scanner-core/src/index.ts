@@ -1,6 +1,6 @@
 export { ScanStateMachine } from './state-machine.js';
 export { ScanOrchestrator } from './orchestrator.js';
-export { createScanQueue, getRedisConnectionOptions, SCAN_QUEUE_NAME } from './queue.js';
+export { createScanQueue, getRedisConnectionOptions, SCAN_QUEUE_NAME, SCAN_JOB_NAME } from './queue.js';
 export {
   SCAN_EVENTS_CHANNEL,
   formatScanProgressEvent,
