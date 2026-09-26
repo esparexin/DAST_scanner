@@ -1223,34 +1223,6 @@ importers:
         specifier: ^2.0.0
         version: 2.1.9(@types/node@26.6.2)
 
-  workers/crawling:
-    dependencies:
-      '@securityscan/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@securityscan/crawler':
-        specifier: workspace:*
-        version: link:../../packages/crawler
-      '@securityscan/database':
-        specifier: workspace:*
-        version: link:../../packages/database
-      '@securityscan/http-client':
-        specifier: workspace:*
-        version: link:../../packages/http-client
-      '@securityscan/scope':
-        specifier: workspace:*
-        version: link:../../packages/scope
-      '@securityscan/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
-    devDependencies:
-      typescript:
-        specifier: ^5.5.0
-        version: 5.9.3
-      vitest:
-        specifier: ^2.0.0
-        version: 2.1.9(@types/node@26.6.2)
-
   workers/discovery:
     dependencies:
       '@securityscan/contracts':
