@@ -175,11 +175,45 @@ export const scansApi = {
   getEventsUrl: (id: string) => `${API_BASE}/api/scans/${id}/events`,
 };
 
+export interface ApiTargetChallenge {
+  token: string;
+  method?: string;
+  wellKnownPath: string;
+  expectedContent: string;
+  dnsRecordName: string;
+  dnsExpectedValue: string;
+  expiresAt: string;
+}
+
+export interface CreateTargetRequest {
+  projectId: string;
+  baseUrl: string;
+  name?: string;
+}
+
 // Targets
 export const targetsApi = {
   list: (projectId?: string) =>
     fetchApi<ApiTarget[]>(projectId ? `/api/targets?projectId=${projectId}` : '/api/targets'),
   get: (id: string) => fetchApi<ApiTarget>(`/api/targets/${id}`),
+  create: (data: CreateTargetRequest) =>
+    fetchApi<ApiTarget>('/api/targets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  initiateVerification: (id: string, method?: string) =>
+    fetchApi<{ targetId: string; challenge: ApiTargetChallenge }>(`/api/targets/${id}/verify/initiate`, {
+      method: 'POST',
+      body: JSON.stringify({ method }),
+    }),
+  checkVerification: (id: string, method?: string) =>
+    fetchApi<{ verified: boolean; target: ApiTarget; result: { verified: boolean; method: string; details?: string } }>(
+      `/api/targets/${id}/verify/check`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ method }),
+      },
+    ),
 };
 
 // Findings
