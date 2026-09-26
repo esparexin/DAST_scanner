@@ -28,7 +28,7 @@ export function createVulnerableServer(port: number = 9999): http.Server {
       // SQL injection vulnerability simulation
       if (q.includes("'") || q.includes('"')) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('PostgreSQL: syntax error at or near "\\'" at line 1');
+        res.end('PostgreSQL: syntax error at or near "\'" at line 1');
         return;
       }
       // XSS reflection vulnerability simulation

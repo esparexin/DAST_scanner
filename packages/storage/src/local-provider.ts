@@ -14,7 +14,7 @@ export class LocalStorageProvider implements StorageProvider {
     if (key.includes('..')) {
       throw new Error(`Path traversal attempt detected in storage key: ${key}`);
     }
-    const cleanKey = key.replace(/^[\\\/]+/, '');
+    const cleanKey = key.replace(/^[\\/]+/, '');
     const resolved = path.resolve(this.baseDir, cleanKey);
     if (!resolved.startsWith(this.baseDir)) {
       throw new Error(`Path traversal attempt detected in storage key: ${key}`);
