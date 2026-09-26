@@ -16,20 +16,55 @@ export async function fetchApi<T>(
     throw new Error(`API Error: ${res.status} ${res.statusText}`);
   }
 
-  return res.json();
+  const json = await res.json();
+  if (json && typeof json === 'object' && 'data' in json) {
+    return json.data as T;
+  }
+  return json as T;
 }
 
 // ---- Typed API client functions ----
 
+export interface ApiScanProgress {
+  phase?: string;
+  percent?: number;
+  currentTask?: string;
+  totalEndpoints?: number;
+  testedEndpoints?: number;
+  findingsFound?: number;
+}
+
 export interface ApiScan {
   _id: string;
+  projectId?: string;
+  targetId?: string;
   targetUrl: string;
   profile: string;
   status: string;
+  dryRun?: boolean;
   findingsCount?: number;
+  progress?: ApiScanProgress;
   startedAt?: string;
   completedAt?: string;
+  cancelledAt?: string;
   createdAt: string;
+}
+
+export interface ApiDryRunResult {
+  target: string;
+  allowedHosts: string[];
+  excludedHosts: string[];
+  allowedPaths: string[];
+  excludedPaths: string[];
+  scanProfile: string;
+  authProfileCount: number;
+  enabledCategories: string[];
+  maxRequestsPerSecond: number;
+  maxConcurrency: number;
+  maxRequests: number;
+  maxCrawlDepth: number;
+  maxScanDuration: number;
+  dryRun: boolean;
 }
 
 export interface ApiFinding {
@@ -54,6 +89,15 @@ export interface ApiProject {
   name: string;
   description?: string;
   targets: string[];
+  createdAt: string;
+}
+
+export interface ApiTarget {
+  _id: string;
+  projectId: string;
+  baseUrl: string;
+  name?: string;
+  authorization: string;
   createdAt: string;
 }
 
@@ -86,8 +130,9 @@ export interface ApiStats {
 
 export interface CreateScanRequest {
   targetUrl: string;
-  scopePatterns: string[];
+  scopePatterns?: string[];
   profile: string;
+  dryRun?: boolean;
 }
 
 // Scans
@@ -101,6 +146,16 @@ export const scansApi = {
     }),
   cancel: (id: string) =>
     fetchApi<ApiScan>(`/api/scans/${id}/cancel`, { method: 'POST' }),
+  dryRun: (id: string) =>
+    fetchApi<ApiDryRunResult>(`/api/scans/${id}/dry-run`, { method: 'POST' }),
+  getEventsUrl: (id: string) => `${API_BASE}/api/scans/${id}/events`,
+};
+
+// Targets
+export const targetsApi = {
+  list: (projectId?: string) =>
+    fetchApi<ApiTarget[]>(projectId ? `/api/targets?projectId=${projectId}` : '/api/targets'),
+  get: (id: string) => fetchApi<ApiTarget>(`/api/targets/${id}`),
 };
 
 // Findings
