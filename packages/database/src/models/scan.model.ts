@@ -60,7 +60,7 @@ const ScanProgressSchema = new Schema<IScanProgressDoc>(
     findingsConfirmed: { type: Number, default: 0 },
     errors: { type: Number, default: 0 },
   },
-  { _id: false },
+  { _id: false, suppressReservedKeysWarning: true },
 );
 
 const ScanConfigSchema = new Schema<IScanConfigDoc>(

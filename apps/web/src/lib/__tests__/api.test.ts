@@ -23,9 +23,15 @@ describe('Web API Client & Authentication Layer', () => {
 
     setAuthToken('test-jwt-token-123');
     expect(getAuthToken()).toBe('test-jwt-token-123');
+    if (typeof localStorage !== 'undefined') {
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe('test-jwt-token-123');
+    }
 
     clearAuthToken();
     expect(getAuthToken()).toBeNull();
+    if (typeof localStorage !== 'undefined') {
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+    }
   });
 
   it('automatically attaches Authorization header when token is present', async () => {
