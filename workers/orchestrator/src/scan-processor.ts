@@ -53,6 +53,7 @@ import { runApiTestingWorker } from '@securityscan/worker-api-testing';
 import { runVerificationWorker } from '@securityscan/worker-verification';
 import { runEvidenceWorker } from '@securityscan/worker-evidence';
 import { runReportingWorker } from '@securityscan/worker-reporting';
+import { scanMetrics } from '@securityscan/metrics';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('scan-processor');
@@ -90,10 +91,11 @@ export interface ScanJob {
   organizationOverrides?: OrganizationOverrides;
 }
 
-export async function processScan(scanId: string): Promise<void> {
+export async function processScan(scanId: string, options?: { traceId?: string }): Promise<void> {
   const scan = await ScanModel.findById(scanId);
   if (!scan || scan.status === ScanStatus.CANCELLED) return;
 
+  const traceId = options?.traceId;
   const target = await TargetModel.findById(scan.targetId);
   if (!target || target.authorization !== 'AUTHORIZED') {
     await ScanModel.findByIdAndUpdate(scanId, {
@@ -104,6 +106,28 @@ export async function processScan(scanId: string): Promise<void> {
     return;
   }
 
+  const scanStart = Date.now();
+  scanMetrics.incrementCounter('securityscan_scans_total');
+  scanMetrics.incrementGauge('securityscan_scans_active');
+
+  const recordPhase = async (
+    phase: ScanStatus,
+    message: string,
+    action: () => Promise<unknown>,
+  ) => {
+    const phaseStart = Date.now();
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: phase,
+      'progress.phase': phase,
+    });
+    await emitProgress(scanId, phase, { message });
+    await action();
+    const phaseDuration = (Date.now() - phaseStart) / 1000;
+    scanMetrics.observeHistogram('securityscan_phase_duration_seconds', phaseDuration, {
+      phase,
+    });
+  };
+
   try {
     const checkCancelled = async () => {
       const s = await ScanModel.findById(scanId);
@@ -112,60 +136,41 @@ export async function processScan(scanId: string): Promise<void> {
       }
     };
 
+    await checkCancelled();
     await ScanModel.findByIdAndUpdate(scanId, {
-      status: ScanStatus.CRAWLING,
       startedAt: new Date(),
-      'progress.phase': ScanStatus.CRAWLING,
     });
-    await emitProgress(scanId, ScanStatus.CRAWLING, { message: 'Crawler initiated' });
+    await recordPhase(ScanStatus.CRAWLING, 'Crawler initiated', async () => {});
 
     await checkCancelled();
-    await ScanModel.findByIdAndUpdate(scanId, {
-      status: ScanStatus.PASSIVE_ANALYSIS,
-      'progress.phase': ScanStatus.PASSIVE_ANALYSIS,
+    await recordPhase(ScanStatus.PASSIVE_ANALYSIS, 'Running passive security checks', async () => {
+      await processPassiveAnalysis(scanId);
     });
-    await emitProgress(scanId, ScanStatus.PASSIVE_ANALYSIS, { message: 'Running passive security checks' });
-    await processPassiveAnalysis(scanId);
 
     await checkCancelled();
-    await ScanModel.findByIdAndUpdate(scanId, {
-      status: ScanStatus.ACTIVE_TESTING,
-      'progress.phase': ScanStatus.ACTIVE_TESTING,
+    await recordPhase(ScanStatus.ACTIVE_TESTING, 'Running active payload checks', async () => {
+      await runActiveTestingWorker(scanId);
     });
-    await emitProgress(scanId, ScanStatus.ACTIVE_TESTING, { message: 'Running active payload checks' });
-    await runActiveTestingWorker(scanId);
 
     await checkCancelled();
-    await ScanModel.findByIdAndUpdate(scanId, {
-      status: ScanStatus.API_TESTING,
-      'progress.phase': ScanStatus.API_TESTING,
+    await recordPhase(ScanStatus.API_TESTING, 'Running API security checks', async () => {
+      await runApiTestingWorker(scanId);
     });
-    await emitProgress(scanId, ScanStatus.API_TESTING, { message: 'Running API security checks' });
-    await runApiTestingWorker(scanId);
 
     await checkCancelled();
-    await ScanModel.findByIdAndUpdate(scanId, {
-      status: ScanStatus.VERIFYING,
-      'progress.phase': ScanStatus.VERIFYING,
+    await recordPhase(ScanStatus.VERIFYING, 'Verifying findings', async () => {
+      await runVerificationWorker(scanId);
     });
-    await emitProgress(scanId, ScanStatus.VERIFYING, { message: 'Verifying findings' });
-    await runVerificationWorker(scanId);
 
     await checkCancelled();
-    await ScanModel.findByIdAndUpdate(scanId, {
-      status: ScanStatus.EVIDENCE_COLLECTION,
-      'progress.phase': ScanStatus.EVIDENCE_COLLECTION,
+    await recordPhase(ScanStatus.EVIDENCE_COLLECTION, 'Collecting proof and evidence', async () => {
+      await runEvidenceWorker(scanId);
     });
-    await emitProgress(scanId, ScanStatus.EVIDENCE_COLLECTION, { message: 'Collecting proof and evidence' });
-    await runEvidenceWorker(scanId);
 
     await checkCancelled();
-    await ScanModel.findByIdAndUpdate(scanId, {
-      status: ScanStatus.REPORTING,
-      'progress.phase': ScanStatus.REPORTING,
+    await recordPhase(ScanStatus.REPORTING, 'Generating report', async () => {
+      await runReportingWorker(scanId);
     });
-    await emitProgress(scanId, ScanStatus.REPORTING, { message: 'Generating report' });
-    await runReportingWorker(scanId);
 
     await ScanModel.findByIdAndUpdate(scanId, {
       status: ScanStatus.COMPLETED,
@@ -173,13 +178,23 @@ export async function processScan(scanId: string): Promise<void> {
       completedAt: new Date(),
     });
     await emitProgress(scanId, ScanStatus.COMPLETED, { message: 'Scan finished successfully' });
+
+    scanMetrics.incrementCounter('securityscan_scans_completed_total');
+    scanMetrics.incrementGauge('securityscan_scans_active', {}, -1);
+    const totalDuration = (Date.now() - scanStart) / 1000;
+    scanMetrics.observeHistogram('securityscan_scan_duration_seconds', totalDuration);
+
+    logger.info({ scanId, traceId, durationSeconds: totalDuration }, 'Scan execution completed successfully');
   } catch (err: any) {
+    scanMetrics.incrementGauge('securityscan_scans_active', {}, -1);
     if (err?.message === 'Scan cancelled by user') {
-      logger.info({ scanId }, 'Scan terminated due to cancellation');
+      logger.info({ scanId, traceId }, 'Scan terminated due to cancellation');
       await emitProgress(scanId, ScanStatus.CANCELLED, { message: 'Scan cancelled by user' });
       return;
     }
-    logger.error({ scanId, err }, 'Scan processing failed');
+
+    scanMetrics.incrementCounter('securityscan_scans_failed_total');
+    logger.error({ scanId, traceId, err }, 'Scan processing failed');
     await ScanModel.findByIdAndUpdate(scanId, {
       status: ScanStatus.FAILED,
       failureReason: err?.message ?? 'Internal scan execution error',

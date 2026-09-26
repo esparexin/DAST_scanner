@@ -50,6 +50,7 @@
     "@securityscan/worker-verification": "workspace:*",
     "@securityscan/worker-evidence": "workspace:*",
     "@securityscan/worker-reporting": "workspace:*",
+    "@securityscan/metrics": "workspace:*",
     "@securityscan/scanner-core": "workspace:*",
     "@securityscan/shared": "workspace:*",
     "@securityscan/verification-engine": "workspace:*",

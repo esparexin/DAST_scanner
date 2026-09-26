@@ -15,15 +15,23 @@ function getQueue(): Queue {
   return scanQueue;
 }
 
-export async function enqueueScan(scanId: string): Promise<void> {
+export async function enqueueScan(
+  scanId: string,
+  metadata?: { traceId?: string },
+): Promise<void> {
   try {
     const queue = getQueue();
-    await queue.add('scan', { scanId }, {
-      jobId: `scan-${scanId}`,
-      removeOnComplete: 100,
-      removeOnFail: 100,
-    });
-    logger.info({ scanId }, 'Scan enqueued');
+    const traceId = metadata?.traceId;
+    await queue.add(
+      'scan',
+      { scanId, traceId },
+      {
+        jobId: `scan-${scanId}`,
+        removeOnComplete: 100,
+        removeOnFail: 100,
+      },
+    );
+    logger.info({ scanId, traceId }, 'Scan enqueued');
   } catch (error) {
     // Queue might not be available in dev; log but don't fail
     logger.warn({ scanId, error: (error as Error).message }, 'Failed to enqueue scan (Redis may be unavailable)');

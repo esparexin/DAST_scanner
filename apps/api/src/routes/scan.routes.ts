@@ -150,7 +150,7 @@ scanRouter.post('/', scanRateLimiter, validate(CreateScanSchema), async (req: Au
     });
 
     // Enqueue for processing
-    await enqueueScan(scan._id.toString());
+    await enqueueScan(scan._id.toString(), { traceId: (req as any).traceId });
 
     res.status(201).json({ data: scan });
   } catch (err) {

@@ -160,3 +160,21 @@ scanMetrics.registerHistogram(
   'HTTP request duration in seconds',
   [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
 );
+scanMetrics.registerHistogram(
+  'securityscan_phase_duration_seconds',
+  'Duration of individual scan pipeline phases in seconds',
+  [0.1, 0.5, 1, 5, 10, 30, 60, 120, 300, 600],
+);
+scanMetrics.registerHistogram(
+  'securityscan_api_request_duration_seconds',
+  'HTTP request latency in seconds for API endpoints',
+  [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
+);
+scanMetrics.registerCounter(
+  'securityscan_api_requests_total',
+  'Total number of API HTTP requests handled',
+);
+scanMetrics.registerGauge(
+  'securityscan_worker_jobs_active',
+  'Number of active BullMQ scan jobs being processed',
+);

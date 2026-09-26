@@ -16,6 +16,8 @@ import { metricsRoutes } from './routes/metrics.routes.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { intelligenceRouter } from './routes/intelligence.routes.js';
 import { apiRateLimiter } from './middleware/rate-limiter.js';
+import { tracingMiddleware } from './middleware/tracing.js';
+import { httpMetricsMiddleware } from './middleware/metrics.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 export function createApp() {
@@ -24,6 +26,8 @@ export function createApp() {
   app.use(helmet());
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+  app.use(tracingMiddleware);
+  app.use(httpMetricsMiddleware);
 
   if (process.env['NODE_ENV'] !== 'test') {
     app.use('/api', apiRateLimiter);

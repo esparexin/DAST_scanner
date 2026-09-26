@@ -1378,6 +1378,9 @@ importers:
       '@securityscan/knowledge-base':
         specifier: workspace:*
         version: link:../../packages/knowledge-base
+      '@securityscan/metrics':
+        specifier: workspace:*
+        version: link:../../packages/metrics
       '@securityscan/payload-engine':
         specifier: workspace:*
         version: link:../../packages/payload-engine
