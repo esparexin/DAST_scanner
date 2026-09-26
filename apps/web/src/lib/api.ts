@@ -104,8 +104,29 @@ export interface ApiTarget {
 export interface ApiReport {
   _id: string;
   scanId: string;
+  projectId?: string;
+  targetId?: string;
   format: string;
-  status: string;
+  title: string;
+  generatedAt?: string;
+  scope?: {
+    targetUrl?: string;
+    scanProfile?: string;
+  };
+  summary?: {
+    totalFindings: number;
+    criticalCount: number;
+    highCount: number;
+    mediumCount: number;
+    lowCount: number;
+    infoCount: number;
+    confirmedCount?: number;
+    endpointsScanned?: number;
+    requestsMade?: number;
+  };
+  storageKey?: string;
+  storageUrl?: string;
+  status?: string;
   createdAt: string;
 }
 
@@ -184,11 +205,13 @@ export const projectsApi = {
 // Reports
 export const reportsApi = {
   list: () => fetchApi<ApiReport[]>('/api/reports'),
+  get: (id: string) => fetchApi<ApiReport>(`/api/reports/${id}`),
   generate: (scanId: string, format: string) =>
     fetchApi<ApiReport>('/api/reports', {
       method: 'POST',
       body: JSON.stringify({ scanId, format }),
     }),
+  getDownloadUrl: (id: string) => `${API_BASE}/api/reports/${id}/download`,
 };
 
 // Audit Logs
