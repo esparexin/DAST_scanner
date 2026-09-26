@@ -1,6 +1,8 @@
 import { Router } from 'express';
-import { TargetModel, ProjectModel } from '@securityscan/database';
-import { CreateTargetSchema, UpdateTargetSchema, AuthorizationState } from '@securityscan/contracts';
+import dns from 'node:dns/promises';
+import { TargetModel, ProjectModel, AuditLogModel } from '@securityscan/database';
+import { CreateTargetSchema, UpdateTargetSchema, AuthorizationState, AuditAction, TargetVerificationMethod } from '@securityscan/contracts';
+import { TargetOwnershipVerifier } from '@securityscan/scope';
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 
@@ -98,6 +100,134 @@ targetRouter.patch('/:id', validate(UpdateTargetSchema), async (req: AuthRequest
       { new: true },
     );
     res.json({ data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Initiate domain ownership verification challenge
+targetRouter.post('/:id/verify/initiate', async (req: AuthRequest, res, next) => {
+  try {
+    const target = await TargetModel.findById(req.params['id']);
+    if (!target) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Target not found' } });
+      return;
+    }
+    const project = await ProjectModel.findOne({ _id: target.projectId, ownerId: req.userId });
+    if (!project) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
+      return;
+    }
+
+    let hostname = target.scope.allowedHosts[0] || 'localhost';
+    try {
+      hostname = new URL(target.baseUrl).hostname;
+    } catch {
+      // keep fallback
+    }
+
+    const challenge = TargetOwnershipVerifier.generateChallenge(target._id.toString(), hostname);
+    target.verificationChallenge = {
+      token: challenge.token,
+      method: req.body.method || TargetVerificationMethod.HTTP_WELL_KNOWN,
+      wellKnownPath: challenge.wellKnownPath,
+      expectedContent: challenge.expectedContent,
+      dnsRecordName: challenge.dnsRecordName,
+      dnsExpectedValue: challenge.dnsExpectedValue,
+      expiresAt: challenge.expiresAt,
+    };
+    await target.save();
+
+    res.json({
+      data: {
+        targetId: target._id,
+        challenge,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Check/Execute domain ownership verification challenge
+targetRouter.post('/:id/verify/check', async (req: AuthRequest, res, next) => {
+  try {
+    const target = await TargetModel.findById(req.params['id']);
+    if (!target) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Target not found' } });
+      return;
+    }
+    const project = await ProjectModel.findOne({ _id: target.projectId, ownerId: req.userId });
+    if (!project) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
+      return;
+    }
+
+    const challenge = target.verificationChallenge;
+    if (!challenge) {
+      res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'No active verification challenge found. Initiate verification first.' } });
+      return;
+    }
+
+    if (new Date() > new Date(challenge.expiresAt)) {
+      res.status(400).json({ error: { code: 'CHALLENGE_EXPIRED', message: 'Verification challenge has expired. Initiate a new challenge.' } });
+      return;
+    }
+
+    const method = req.body.method || challenge.method || TargetVerificationMethod.HTTP_WELL_KNOWN;
+    let verificationResult;
+
+    if (method === TargetVerificationMethod.DNS_TXT || method === 'DNS_TXT') {
+      try {
+        const records = await dns.resolveTxt(challenge.dnsRecordName);
+        verificationResult = TargetOwnershipVerifier.verifyDnsChallenge(records, challenge as any);
+      } catch (dnsErr: any) {
+        verificationResult = {
+          verified: false,
+          method: 'DNS_TXT' as const,
+          details: `DNS lookup failed for ${challenge.dnsRecordName}: ${dnsErr?.message || 'Host not found'}`,
+        };
+      }
+    } else {
+      try {
+        const checkUrl = new URL(challenge.wellKnownPath, target.baseUrl).toString();
+        const response = await fetch(checkUrl, { signal: AbortSignal.timeout(5000) });
+        const content = await response.text();
+        verificationResult = TargetOwnershipVerifier.verifyHttpChallenge(content, challenge as any);
+      } catch (httpErr: any) {
+        verificationResult = {
+          verified: false,
+          method: 'HTTP_CHALLENGE' as const,
+          details: `HTTP fetch failed at ${challenge.wellKnownPath}: ${httpErr?.message || 'Connection refused'}`,
+        };
+      }
+    }
+
+    if (verificationResult.verified) {
+      target.authorization = AuthorizationState.AUTHORIZED;
+      target.authorizedAt = new Date();
+      target.authorizedBy = req.userId as any;
+      await target.save();
+
+      await AuditLogModel.create({
+        action: AuditAction.TARGET_AUTHORIZED,
+        actorId: req.userId,
+        resourceType: 'Target',
+        resourceId: target._id.toString(),
+        details: { method, verificationResult },
+        timestamp: new Date(),
+      });
+    }
+
+    res.json({
+      data: {
+        verified: verificationResult.verified,
+        method: verificationResult.method,
+        details: verificationResult.details,
+        authorization: target.authorization,
+        authorizedAt: target.authorizedAt,
+      },
+    });
   } catch (err) {
     next(err);
   }

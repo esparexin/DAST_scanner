@@ -1,4 +1,6 @@
 export { connectDatabase, disconnectDatabase, isDatabaseConnected } from './connection.js';
+export { OrganizationModel } from './models/organization.model.js';
+export { MembershipModel } from './models/membership.model.js';
 export { UserModel } from './models/user.model.js';
 export { ProjectModel } from './models/project.model.js';
 export { TargetModel } from './models/target.model.js';

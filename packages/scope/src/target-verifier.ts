@@ -54,4 +54,24 @@ export class TargetOwnershipVerifier {
       details: 'Challenge file content did not match expected verification token',
     };
   }
+
+  /**
+   * Verify DNS challenge TXT records
+   */
+  static verifyDnsChallenge(txtRecords: string[] | string[][], challenge: OwnershipChallenge): VerificationResult {
+    const flattened = txtRecords.flat().map((r) => r.trim());
+    const matched = flattened.some((rec) => rec === challenge.dnsExpectedValue || rec.includes(challenge.dnsExpectedValue));
+    if (matched) {
+      return {
+        verified: true,
+        method: 'DNS_TXT',
+        details: `DNS TXT record successfully verified at ${challenge.dnsRecordName}`,
+      };
+    }
+    return {
+      verified: false,
+      method: 'DNS_TXT',
+      details: `Expected TXT record containing '${challenge.dnsExpectedValue}' not found at ${challenge.dnsRecordName}`,
+    };
+  }
 }

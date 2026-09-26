@@ -3,6 +3,7 @@ import cors from 'cors';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { projectRouter } from './routes/project.routes.js';
+import { organizationRouter } from './routes/organization.routes.js';
 import { targetRouter } from './routes/target.routes.js';
 import { scanRouter } from './routes/scan.routes.js';
 import { findingRouter } from './routes/finding.routes.js';
@@ -24,6 +25,7 @@ export function createApp() {
   app.use('/api/health', healthRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/projects', projectRouter);
+  app.use('/api/organizations', organizationRouter);
   app.use('/api/targets', targetRouter);
   app.use('/api/scans', scanRouter);
   app.use('/api/findings', findingRouter);

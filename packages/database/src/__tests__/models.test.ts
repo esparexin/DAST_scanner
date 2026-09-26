@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
 import { UserModel } from '../models/user.model.js';
+import { OrganizationModel } from '../models/organization.model.js';
+import { MembershipModel } from '../models/membership.model.js';
 import { ProjectModel } from '../models/project.model.js';
 import { TargetModel } from '../models/target.model.js';
 import { FindingModel } from '../models/finding.model.js';
@@ -57,5 +59,26 @@ describe('Database Models Schema Validation', () => {
     });
     const error = validFinding.validateSync();
     expect(error).toBeUndefined();
+  });
+
+  it('validates Organization model schema requirements', async () => {
+    const org = new OrganizationModel({
+      name: 'Acme Corp',
+      slug: 'acme-corp',
+      ownerId: new mongoose.Types.ObjectId(),
+    });
+    const error = org.validateSync();
+    expect(error).toBeUndefined();
+    expect(org.tier).toBe('FREE');
+  });
+
+  it('validates Membership model schema requirements', async () => {
+    const membership = new MembershipModel({
+      organizationId: new mongoose.Types.ObjectId(),
+      userId: new mongoose.Types.ObjectId(),
+    });
+    const error = membership.validateSync();
+    expect(error).toBeUndefined();
+    expect(membership.role).toBe('VIEWER');
   });
 });

@@ -12,3 +12,4 @@ export * from './scope.js';
 export * from './rule.js';
 export * from './http.js';
 export * from './audit.js';
+export * from './organization.js';

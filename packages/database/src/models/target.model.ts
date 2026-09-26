@@ -15,6 +15,16 @@ export interface ITargetScopeDoc {
   timeoutPerRequest: number;
 }
 
+export interface ITargetChallengeDoc {
+  token: string;
+  method: string;
+  wellKnownPath: string;
+  expectedContent: string;
+  dnsRecordName: string;
+  dnsExpectedValue: string;
+  expiresAt: Date;
+}
+
 export interface ITargetDocument extends Document {
   projectId: Types.ObjectId;
   name: string;
@@ -24,6 +34,7 @@ export interface ITargetDocument extends Document {
   authorizedAt?: Date;
   authorizedBy?: Types.ObjectId;
   scope: ITargetScopeDoc;
+  verificationChallenge?: ITargetChallengeDoc;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +52,19 @@ const TargetScopeSchema = new Schema<ITargetScopeDoc>(
     maxResponseSize: { type: Number, default: 10 * 1024 * 1024 },
     maxScanDuration: { type: Number, default: 3600 },
     timeoutPerRequest: { type: Number, default: 30 },
+  },
+  { _id: false },
+);
+
+const TargetChallengeSchema = new Schema<ITargetChallengeDoc>(
+  {
+    token: { type: String, required: true },
+    method: { type: String, required: true },
+    wellKnownPath: { type: String, required: true },
+    expectedContent: { type: String, required: true },
+    dnsRecordName: { type: String, required: true },
+    dnsExpectedValue: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
   },
   { _id: false },
 );
@@ -63,6 +87,7 @@ const TargetSchema = new Schema<ITargetDocument>(
     authorizedAt: { type: Date },
     authorizedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     scope: { type: TargetScopeSchema, required: true },
+    verificationChallenge: { type: TargetChallengeSchema },
   },
   { timestamps: true },
 );

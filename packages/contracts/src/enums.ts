@@ -1,3 +1,24 @@
+// === Organization & Tenancy ===
+
+export enum OrgRole {
+  ORG_ADMIN = 'ORG_ADMIN',
+  SECURITY_LEAD = 'SECURITY_LEAD',
+  SECURITY_TESTER = 'SECURITY_TESTER',
+  VIEWER = 'VIEWER',
+}
+
+export enum SubscriptionTier {
+  FREE = 'FREE',
+  DEVELOPER = 'DEVELOPER',
+  TEAM = 'TEAM',
+  ENTERPRISE = 'ENTERPRISE',
+}
+
+export enum TargetVerificationMethod {
+  DNS_TXT = 'DNS_TXT',
+  HTTP_WELL_KNOWN = 'HTTP_WELL_KNOWN',
+}
+
 // === Authorization ===
 
 export enum AuthorizationState {

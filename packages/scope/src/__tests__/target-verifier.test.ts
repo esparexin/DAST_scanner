@@ -22,4 +22,17 @@ describe('TargetOwnershipVerifier', () => {
     const result = TargetOwnershipVerifier.verifyHttpChallenge('random-wrong-content', challenge);
     expect(result.verified).toBe(false);
   });
+
+  it('verifies valid DNS challenge response', () => {
+    const challenge = TargetOwnershipVerifier.generateChallenge('target-123', 'api.corp.com');
+    const result = TargetOwnershipVerifier.verifyDnsChallenge([challenge.dnsExpectedValue], challenge);
+    expect(result.verified).toBe(true);
+    expect(result.method).toBe('DNS_TXT');
+  });
+
+  it('rejects mismatched DNS challenge response', () => {
+    const challenge = TargetOwnershipVerifier.generateChallenge('target-123', 'api.corp.com');
+    const result = TargetOwnershipVerifier.verifyDnsChallenge(['unrelated-txt-record'], challenge);
+    expect(result.verified).toBe(false);
+  });
 });
