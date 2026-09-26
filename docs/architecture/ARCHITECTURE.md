@@ -102,12 +102,15 @@ packages/
   poc-engine/    → Safe PoC generation
   finding-engine/→ Finding normalization and deduplication
   risk-engine/   → Severity/confidence classification
-  security-rules/→ Central rule registry
+  security-rules/→ Central rule registry and definitions
   reporting/     → Report generation (HTML/PDF/JSON/SARIF)
   shared/        → Utilities, constants, helpers
+  storage/       → Provider-agnostic object storage (S3/local)
+  ai/            → AI remediation and context triage
+  metrics/       → Prometheus metrics collection
 workers/
-  discovery/     → Discovery worker
-  crawling/      → Crawl worker
+  orchestrator/  → Scan pipeline orchestration
+  discovery/     → Crawl and endpoint discovery worker
   passive-analysis/ → Passive check worker
   active-testing/→ Active check worker
   api-testing/   → API-specific test worker
@@ -128,10 +131,9 @@ checks/
   cryptography/
   api/
 tests/
-  fixtures/
-  integration/
-  regression/
-  security-lab/
+  fixtures/      → Test servers and sample specifications
+  security-lab/  → End-to-end vulnerability test laboratory
+  * Note: Unit and integration tests are colocated in src/__tests__/ across packages
 infrastructure/
   docker/
   compose/

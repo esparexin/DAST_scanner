@@ -64,3 +64,23 @@ Format: `NNNN-short-title.md`
 - No `any` types without documented justification.
 - No unused imports/variables.
 - No duplicate abstractions.
+
+## Naming & File Organization Conventions
+
+1. **Directories & Files:** All directory and file names across `apps/`, `packages/`, `checks/`, and `workers/` must use lowercase `kebab-case`. Never use uppercase or `snake_case` in paths.
+2. **Compound Extensions:**
+   - Database models: `{entity}.model.ts`
+   - Validation schemas: `{entity}.schema.ts`
+   - Express route modules: `{entity}.routes.ts`
+   - Backend services: `{domain}.service.ts`
+   - Payload catalogs: `{category}.catalog.ts`
+   - Security checks: `{name}-check.ts` or `{name}-checks.ts`
+   - React components: `{name}.tsx`
+3. **Router Exports:** Express route files must export `{entity}Router` as an `express.Router` instance.
+4. **Database Models:** Mongoose models must be exported as `{Entity}Model` from `packages/database/src/models/{entity}.model.ts`.
+5. **Zod Validation Schemas:** Schemas must be named `Create{Entity}Schema` / `Update{Entity}Schema` in `packages/contracts/src/schemas/`.
+6. **Worker Entry Points:** Background worker packages must export a `run{Phase}Worker` function from `src/index.ts`.
+7. **React Components:** Place reusable UI components in `apps/web/src/components/{name}.tsx` with PascalCase named exports. Never use default exports for shared components.
+8. **Constants:** System-wide constants must be `UPPER_SNAKE_CASE` in `packages/contracts/src/constants.ts`.
+9. **Domain Interfaces:** Shared interfaces for entities must use `I{Entity}` prefix in `packages/contracts/src/types/`. Zod-inferred input types must use `{Action}{Entity}Input`.
+
