@@ -1,22 +1,20 @@
-import { Nav } from '@/components/nav';
-
 export default function ProjectsPage() {
   return (
-    <>
-      <Nav />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Projects</h1>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            New Project
-          </button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-black">Projects</h1>
+          <p className="mt-1 text-sm text-gray-700">Organize targets, scope configurations, and scan policies</p>
         </div>
-        <div className="bg-gray-900 rounded-lg border border-gray-800">
-          <div className="p-6 text-center text-gray-500">
-            No projects yet. Create one to start security testing.
-          </div>
-        </div>
-      </main>
-    </>
+        <button className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm">
+          + New Project
+        </button>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
+        <p className="text-gray-700 font-medium text-sm">
+          Default project configured. Create dedicated workspace projects to segment production vs staging assets.
+        </p>
+      </div>
+    </div>
   );
 }

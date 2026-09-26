@@ -208,31 +208,31 @@ export default function ScansPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Scans</h1>
-          <p className="mt-1 text-gray-600">
+          <h1 className="text-3xl font-bold text-black">Scans</h1>
+          <p className="mt-1 text-sm text-gray-700">
             Manage and monitor security scans with live progress streaming
           </p>
         </div>
         <button
           onClick={() => setShowNew(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm font-bold shadow-sm"
         >
-          New Scan
+          + New Scan
         </button>
       </div>
 
       {showNew && (
-        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-600">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Scan</h3>
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <h3 className="text-lg font-bold text-black mb-4">Create New Scan</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-sm font-bold text-black mb-1">
                 Target
               </label>
               {targets.length === 0 ? (
-                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-300 rounded-md p-3">
+                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-300 rounded-lg p-3 font-medium">
                   No targets found.{' '}
-                  <Link href="/targets" className="text-indigo-600 font-semibold underline">
+                  <Link href="/targets" className="text-black font-bold underline">
                     Add and verify a target in Targets first
                   </Link>
                 </div>
@@ -240,7 +240,7 @@ export default function ScansPage() {
                 <select
                   value={selectedTargetId}
                   onChange={(e) => setSelectedTargetId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-black focus:ring-1 focus:ring-black focus:border-black"
                 >
                   {targets.map((t) => (
                     <option key={t._id} value={t._id}>
@@ -251,13 +251,13 @@ export default function ScansPage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-sm font-bold text-black mb-1">
                 Scan Profile
               </label>
               <select
                 value={newProfile}
                 onChange={(e) => setNewProfile(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-black focus:ring-1 focus:ring-black focus:border-black"
               >
                 {SCAN_PROFILES.map((p) => (
                   <option key={p} value={p}>
@@ -269,9 +269,9 @@ export default function ScansPage() {
           </div>
 
           {selectedTarget && selectedTarget.authorization !== 'AUTHORIZED' && (
-            <div className="mt-3 bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-800">
+            <div className="mt-3 bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-900 font-medium">
               <span className="font-bold">Target Pending Authorization:</span> This target has not completed DNS/HTTP ownership verification yet. You can run in <strong>Dry-Run Mode</strong> to validate scope and configuration without sending exploits, or verify ownership on the{' '}
-              <Link href="/targets" className="underline font-bold">
+              <Link href="/targets" className="underline font-bold text-black">
                 Targets page
               </Link>{' '}
               before executing active scans.
@@ -284,24 +284,24 @@ export default function ScansPage() {
               type="checkbox"
               checked={newDryRun}
               onChange={(e) => setNewDryRun(e.target.checked)}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
             />
-            <label htmlFor="dryRun" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="dryRun" className="ml-2 block text-sm font-medium text-black">
               Run in Dry-Run Mode (validates scope and configurations without executing active attack payloads)
             </label>
           </div>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-2 text-sm text-red-600 font-semibold">{error}</p>}
           <div className="mt-4 flex gap-3">
             <button
               onClick={handleCreate}
               disabled={submitting || targets.length === 0}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
+              className="bg-black text-white px-5 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 text-xs font-bold transition-colors shadow-sm"
             >
               {submitting ? 'Creating...' : 'Start Scan'}
             </button>
             <button
               onClick={() => setShowNew(false)}
-              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 text-sm font-medium"
+              className="bg-gray-100 text-black px-4 py-2 rounded-lg hover:bg-gray-200 text-xs font-bold transition-colors"
             >
               Cancel
             </button>
@@ -379,26 +379,26 @@ export default function ScansPage() {
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3.5 text-left text-xs font-bold text-black uppercase tracking-wider">
                 Target
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3.5 text-left text-xs font-bold text-black uppercase tracking-wider">
                 Profile
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3.5 text-left text-xs font-bold text-black uppercase tracking-wider">
                 Status & Progress
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3.5 text-left text-xs font-bold text-black uppercase tracking-wider">
                 Findings
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3.5 text-left text-xs font-bold text-black uppercase tracking-wider">
                 Created
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3.5 text-right text-xs font-bold text-black uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -406,13 +406,13 @@ export default function ScansPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-600 font-medium">
                   Loading scans...
                 </td>
               </tr>
             ) : scans.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-600 font-medium">
                   No scans yet. Click "New Scan" to get started.
                 </td>
               </tr>
@@ -421,16 +421,16 @@ export default function ScansPage() {
                 const isActive = !TERMINAL_STATUSES.has(scan.status);
                 const percent = scan.progress?.percent ?? 0;
                 return (
-                  <tr key={scan._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <tr key={scan._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
                       {scan.targetUrl}
                       {scan.dryRun && (
-                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                           DRY RUN
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
                       {scan.profile}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -445,12 +445,12 @@ export default function ScansPage() {
                           <div className="w-36">
                             <div className="w-full bg-gray-200 rounded-full h-1.5">
                               <div
-                                className="bg-indigo-600 h-1.5 rounded-full transition-all duration-300"
+                                className="bg-black h-1.5 rounded-full transition-all duration-300"
                                 style={{ width: `${Math.min(100, Math.max(5, percent))}%` }}
                               />
                             </div>
                             {scan.progress?.currentTask && (
-                              <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                              <p className="text-[11px] text-gray-700 truncate mt-0.5 font-medium">
                                 {scan.progress.currentTask}
                               </p>
                             )}
@@ -458,17 +458,17 @@ export default function ScansPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
                       {scan.findingsCount ?? 0}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
                       {new Date(scan.createdAt).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end items-center gap-2">
                         <button
                           onClick={() => setSelectedScanForDetails(scan)}
-                          className="text-gray-700 hover:text-gray-900 text-xs font-semibold px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1.5"
+                          className="text-black hover:bg-gray-100 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-gray-300 transition-colors flex items-center gap-1.5"
                         >
                           {isActive && (
                             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -479,7 +479,7 @@ export default function ScansPage() {
                           <button
                             onClick={() => handleCancel(scan._id)}
                             disabled={cancellingId === scan._id}
-                            className="text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 rounded border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                            className="text-red-700 hover:bg-red-50 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-red-300 disabled:opacity-50 transition-colors"
                           >
                             {cancellingId === scan._id ? 'Cancelling...' : 'Cancel'}
                           </button>
@@ -487,7 +487,7 @@ export default function ScansPage() {
                         <button
                           onClick={() => handleInspectDryRun(scan._id)}
                           disabled={dryRunLoading === scan._id}
-                          className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold px-2 py-1 rounded border border-indigo-200 hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+                          className="text-black hover:bg-gray-100 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-gray-300 disabled:opacity-50 transition-colors"
                         >
                           {dryRunLoading === scan._id ? 'Loading...' : 'Inspect'}
                         </button>
