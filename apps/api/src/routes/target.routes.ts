@@ -17,7 +17,7 @@ import { checkTargetQuota } from '../services/quota.service.js';
 
 export const targetRouter = Router();
 targetRouter.use(authenticate);
-targetRouter.use(resolveTenant as any);
+targetRouter.use(resolveTenant);
 
 targetRouter.get('/', async (req: AuthRequest, res, next) => {
   try {

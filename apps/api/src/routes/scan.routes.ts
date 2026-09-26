@@ -18,7 +18,7 @@ import { checkScanQuota } from '../services/quota.service.js';
 
 export const scanRouter = Router();
 scanRouter.use(authenticate);
-scanRouter.use(resolveTenant as any);
+scanRouter.use(resolveTenant);
 
 scanRouter.get('/', async (req: AuthRequest, res, next) => {
   try {

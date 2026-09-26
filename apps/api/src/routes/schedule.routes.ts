@@ -8,16 +8,16 @@ import {
   OrgRole,
   AuthorizationState,
   ScanProfile,
-  SUBSCRIPTION_TIER_QUOTAS,
   SubscriptionTier,
 } from '@securityscan/contracts';
+import { checkScanQuota } from '../services/quota.service.js';
 import { authenticate } from '../middleware/auth.js';
 import { resolveTenant, requireOrgRole, type TenantRequest } from '../middleware/tenant.js';
 import { resolveCronPattern, executeScheduledScan } from '../services/schedule.service.js';
 
 export const scheduleRouter = Router();
 scheduleRouter.use(authenticate);
-scheduleRouter.use(resolveTenant as any);
+scheduleRouter.use(resolveTenant);
 
 // List schedules for organization
 scheduleRouter.get('/', async (req: TenantRequest, res, next) => {
@@ -103,17 +103,12 @@ scheduleRouter.post(
         return;
       }
 
-      // Validate tier profile permission
+      // Validate tier profile permission via quota service (SSOT)
       const selectedProfile = profile ?? ScanProfile.WEB_STANDARD;
       const tier = req.orgTier ?? SubscriptionTier.FREE;
-      const quotas = SUBSCRIPTION_TIER_QUOTAS[tier];
-      if (quotas?.allowedProfiles && !quotas.allowedProfiles.includes(selectedProfile)) {
-        res.status(403).json({
-          error: {
-            code: 'PROFILE_NOT_ALLOWED',
-            message: `Profile '${selectedProfile}' is not available on the ${tier} plan. Allowed profiles: ${quotas.allowedProfiles.join(', ')}`,
-          },
-        });
+      const profileCheck = await checkScanQuota(req.userId!, tier, selectedProfile);
+      if (!profileCheck.allowed && profileCheck.code === 'PROFILE_NOT_ALLOWED') {
+        res.status(403).json({ error: { code: profileCheck.code, message: profileCheck.message } });
         return;
       }
 
@@ -169,14 +164,9 @@ scheduleRouter.patch(
 
       if (profile) {
         const tier = req.orgTier ?? SubscriptionTier.FREE;
-        const quotas = SUBSCRIPTION_TIER_QUOTAS[tier];
-        if (quotas?.allowedProfiles && !quotas.allowedProfiles.includes(profile)) {
-          res.status(403).json({
-            error: {
-              code: 'PROFILE_NOT_ALLOWED',
-              message: `Profile '${profile}' is not available on the ${tier} plan`,
-            },
-          });
+        const profileCheck = await checkScanQuota(req.userId!, tier, profile);
+        if (!profileCheck.allowed && profileCheck.code === 'PROFILE_NOT_ALLOWED') {
+          res.status(403).json({ error: { code: profileCheck.code, message: profileCheck.message } });
           return;
         }
         updates['profile'] = profile;

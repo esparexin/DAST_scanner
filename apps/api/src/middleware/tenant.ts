@@ -1,4 +1,4 @@
-import type { Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { MembershipModel, OrganizationModel } from '@securityscan/database';
 import { OrgRole, SubscriptionTier } from '@securityscan/contracts';
 import type { AuthRequest } from './auth.js';
@@ -12,13 +12,19 @@ export interface TenantRequest extends AuthRequest {
 /**
  * Middleware that resolves tenant context (Organization) for authenticated requests.
  * Uses x-organization-id header, or defaults to the user's first available organization.
+ *
+ * Typed as (req: Request) so Express's router.use() accepts it without casting.
+ * The function mutates req to add TenantRequest fields — this is safe because
+ * authenticate() always runs first and populates the AuthRequest fields.
  */
 export async function resolveTenant(
-  req: TenantRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  if (!req.userId) {
+  // Cast to TenantRequest internally — safe because authenticate() runs first
+  const tenantReq = req as TenantRequest;
+  if (!tenantReq.userId) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User authentication required' } });
     return;
   }
@@ -30,7 +36,7 @@ export async function resolveTenant(
     if (requestedOrgId) {
       membership = await MembershipModel.findOne({
         organizationId: requestedOrgId,
-        userId: req.userId,
+        userId: tenantReq.userId,
       });
       if (!membership) {
         res.status(403).json({
@@ -40,26 +46,26 @@ export async function resolveTenant(
       }
     } else {
       // Default to first membership
-      membership = await MembershipModel.findOne({ userId: req.userId }).sort({ createdAt: 1 });
+      membership = await MembershipModel.findOne({ userId: tenantReq.userId }).sort({ createdAt: 1 });
       if (!membership) {
         // Automatically create a default personal organization if none exists
         const defaultOrg = await OrganizationModel.create({
           name: 'Personal Workspace',
-          slug: `personal-${req.userId.slice(-6)}-${Date.now().toString(36)}`,
-          ownerId: req.userId,
+          slug: `personal-${tenantReq.userId!.slice(-6)}-${Date.now().toString(36)}`,
+          ownerId: tenantReq.userId,
         });
         membership = await MembershipModel.create({
           organizationId: defaultOrg._id,
-          userId: req.userId,
+          userId: tenantReq.userId,
           role: OrgRole.ORG_ADMIN,
         });
       }
     }
 
     const org = await OrganizationModel.findById(membership.organizationId);
-    req.organizationId = membership.organizationId.toString();
-    req.orgRole = membership.role as OrgRole;
-    req.orgTier = (org?.tier as SubscriptionTier) ?? SubscriptionTier.FREE;
+    tenantReq.organizationId = membership.organizationId.toString();
+    tenantReq.orgRole = membership.role as OrgRole;
+    tenantReq.orgTier = (org?.tier as SubscriptionTier) ?? SubscriptionTier.FREE;
     next();
   } catch (error) {
     next(error);

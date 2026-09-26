@@ -8,7 +8,7 @@ import { dispatchWebhook } from '../services/webhook.service.js';
 
 export const webhookRouter = Router();
 webhookRouter.use(authenticate);
-webhookRouter.use(resolveTenant as any);
+webhookRouter.use(resolveTenant);
 
 // List tenant webhooks
 webhookRouter.get('/', async (req: TenantRequest, res, next) => {

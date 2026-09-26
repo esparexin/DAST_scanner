@@ -31,7 +31,7 @@ authRouter.post('/register', authRateLimiter, validate(RegisterSchema), async (r
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await UserModel.create({ email, name, passwordHash });
     const token = jwt.sign({ sub: user._id.toString(), role: user.role }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
+      expiresIn: JWT_EXPIRES_IN as `${number}s` | `${number}m` | `${number}h` | `${number}d`,
     });
     res.status(201).json({
       user: { id: user._id, email: user.email, name: user.name, role: user.role },
@@ -56,7 +56,7 @@ authRouter.post('/login', authRateLimiter, validate(LoginSchema), async (req, re
       return;
     }
     const token = jwt.sign({ sub: user._id.toString(), role: user.role }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
+      expiresIn: JWT_EXPIRES_IN as `${number}s` | `${number}m` | `${number}h` | `${number}d`,
     });
     res.json({
       user: { id: user._id, email: user.email, name: user.name, role: user.role },

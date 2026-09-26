@@ -30,7 +30,7 @@ function requireEnv(key: string, fallback?: string): string {
 export const JWT_SECRET = requireEnv('JWT_SECRET', 'change-me-in-production');
 
 /**
- * JWT expiry string accepted by jsonwebtoken (e.g. '24h', '7d').
+ * JWT expiry duration string accepted by jsonwebtoken (e.g. '24h', '7d', '60s').
  * Defaults to '24h' if not set.
  */
 export const JWT_EXPIRES_IN = requireEnv('JWT_EXPIRES_IN', '24h');
