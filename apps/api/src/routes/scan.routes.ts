@@ -80,22 +80,24 @@ scanRouter.post('/', scanRateLimiter, validate(CreateScanSchema), async (req: Au
       return;
     }
 
-    // ENFORCE: Subscription plan quota & tier limits
-    const quotaCheck = await checkScanQuota(
-      req.userId!,
-      (req as TenantRequest).orgTier ?? SubscriptionTier.FREE,
-      profile,
-    );
-    if (!quotaCheck.allowed) {
-      const statusCode = quotaCheck.code === 'PROFILE_NOT_ALLOWED' ? 403 : 429;
-      res.status(statusCode).json({
-        error: {
-          code: quotaCheck.code ?? 'QUOTA_EXCEEDED',
-          message: quotaCheck.message,
-          details: quotaCheck.details,
-        },
-      });
-      return;
+    // ENFORCE: Subscription plan quota & tier limits (active only if ENFORCE_PLAN_LIMITS=true)
+    if (process.env.ENFORCE_PLAN_LIMITS === 'true') {
+      const quotaCheck = await checkScanQuota(
+        req.userId!,
+        (req as TenantRequest).orgTier ?? SubscriptionTier.FREE,
+        profile,
+      );
+      if (!quotaCheck.allowed) {
+        const statusCode = quotaCheck.code === 'PROFILE_NOT_ALLOWED' ? 403 : 429;
+        res.status(statusCode).json({
+          error: {
+            code: quotaCheck.code ?? 'QUOTA_EXCEEDED',
+            message: quotaCheck.message,
+            details: quotaCheck.details,
+          },
+        });
+        return;
+      }
     }
 
     // Validate scope before creating scan

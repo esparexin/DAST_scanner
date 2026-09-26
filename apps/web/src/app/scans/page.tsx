@@ -15,8 +15,59 @@ import {
   type CreateScanRequest,
 } from '../../lib/api';
 
-/** Derived from the ScanProfile enum in @securityscan/contracts — no magic strings */
-const SCAN_PROFILES = Object.values(ScanProfile);
+/** Detailed configurations for all supported scan profiles */
+export const SCAN_PROFILE_CONFIGS = [
+  {
+    id: ScanProfile.WEB_STANDARD,
+    label: 'Web Standard (OWASP Top 10)',
+    description: 'Balanced crawl and active vulnerability checks (SQLi, XSS, SSRF, CSRF, Misconfigurations) for web applications.',
+  },
+  {
+    id: ScanProfile.QUICK,
+    label: 'Quick / Smoke Test',
+    description: 'Surface-level crawl with fast signature-based vulnerability checks. Ideal for fast smoke testing.',
+  },
+  {
+    id: ScanProfile.PASSIVE,
+    label: 'Passive Only',
+    description: 'Non-invasive analysis of HTTP headers, TLS/SSL certificates, cookies, and leaks without active attack payloads.',
+  },
+  {
+    id: ScanProfile.API_STANDARD,
+    label: 'API Focused',
+    description: 'Specialized testing for REST, GraphQL, gRPC, and SOAP APIs (fuzzing parameters, testing auth & mass assignment).',
+  },
+  {
+    id: ScanProfile.AUTHENTICATED,
+    label: 'Authenticated Scan',
+    description: 'Crawling and testing authenticated user sessions with token and credential replay.',
+  },
+  {
+    id: ScanProfile.AUTHORIZATION,
+    label: 'Authorization / BOLA Matrix',
+    description: 'Tests for broken object-level authorization (IDOR) and multi-user privilege escalation.',
+  },
+  {
+    id: ScanProfile.FULL_ASSESSMENT,
+    label: 'Full Assessment (Deep)',
+    description: 'Exhaustive recursive crawl, parameter mutation, all 12 vulnerability check modules, and deep fuzzing.',
+  },
+  {
+    id: ScanProfile.CICD,
+    label: 'CI/CD Pipeline',
+    description: 'Optimized scan profile with tight execution timeouts for pull requests and build verification.',
+  },
+  {
+    id: ScanProfile.PRODUCTION_SAFE,
+    label: 'Production Safe',
+    description: 'Rate-limited, non-destructive mutation tests with automatic backoff to prevent production disruption.',
+  },
+  {
+    id: ScanProfile.SECURITY_LAB,
+    label: 'Security Lab',
+    description: 'Preconfigured for intentionally vulnerable testing servers and staging targets.',
+  },
+];
 
 /** Statuses where a scan can no longer transition to another state */
 const TERMINAL_STATUSES = new Set<string>([
@@ -259,12 +310,20 @@ export default function ScansPage() {
                 onChange={(e) => setNewProfile(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-black focus:ring-1 focus:ring-black focus:border-black"
               >
-                {SCAN_PROFILES.map((p) => (
-                  <option key={p} value={p}>
-                    {p.replace(/_/g, ' ')}
+                {SCAN_PROFILE_CONFIGS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
                   </option>
                 ))}
               </select>
+              {(() => {
+                const currentProfile = SCAN_PROFILE_CONFIGS.find((p) => p.id === newProfile);
+                return currentProfile ? (
+                  <p className="mt-1.5 text-xs text-gray-700 font-medium">
+                    {currentProfile.description}
+                  </p>
+                ) : null;
+              })()}
             </div>
           </div>
 

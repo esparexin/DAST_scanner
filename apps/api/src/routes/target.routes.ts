@@ -68,20 +68,22 @@ targetRouter.post('/', validate(CreateTargetSchema), async (req: AuthRequest, re
       return;
     }
 
-    // Enforce target limit per subscription tier
-    const quotaCheck = await checkTargetQuota(
-      req.userId!,
-      (req as TenantRequest).orgTier ?? SubscriptionTier.FREE,
-    );
-    if (!quotaCheck.allowed) {
-      res.status(403).json({
-        error: {
-          code: quotaCheck.code ?? 'QUOTA_EXCEEDED',
-          message: quotaCheck.message,
-          details: quotaCheck.details,
-        },
-      });
-      return;
+    // Enforce target limit per subscription tier (active only if ENFORCE_PLAN_LIMITS=true)
+    if (process.env.ENFORCE_PLAN_LIMITS === 'true') {
+      const quotaCheck = await checkTargetQuota(
+        req.userId!,
+        (req as TenantRequest).orgTier ?? SubscriptionTier.FREE,
+      );
+      if (!quotaCheck.allowed) {
+        res.status(403).json({
+          error: {
+            code: quotaCheck.code ?? 'QUOTA_EXCEEDED',
+            message: quotaCheck.message,
+            details: quotaCheck.details,
+          },
+        });
+        return;
+      }
     }
 
     const target = await TargetModel.create({
