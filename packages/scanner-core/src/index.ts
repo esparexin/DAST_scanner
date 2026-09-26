@@ -8,3 +8,12 @@ export {
   createRedisClient,
   publishScanProgress,
 } from './events.js';
+export {
+  IntelligenceChangeDetector,
+  type IntelligenceDiff,
+  type PayloadSummary,
+  StagedIntelligencePipeline,
+  type PipelineStage,
+  type StagedPipelineOptions,
+  type StagedPipelineResult,
+} from './intelligence/index.js';

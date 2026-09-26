@@ -900,9 +900,15 @@ importers:
       '@securityscan/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@securityscan/payload-engine':
+        specifier: workspace:*
+        version: link:../payload-engine
       '@securityscan/scope':
         specifier: workspace:*
         version: link:../scope
+      '@securityscan/security-rules':
+        specifier: workspace:*
+        version: link:../security-rules
       '@securityscan/shared':
         specifier: workspace:*
         version: link:../shared

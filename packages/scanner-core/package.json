@@ -23,6 +23,8 @@
     "@securityscan/contracts": "workspace:*",
     "@securityscan/shared": "workspace:*",
     "@securityscan/scope": "workspace:*",
+    "@securityscan/payload-engine": "workspace:*",
+    "@securityscan/security-rules": "workspace:*",
     "bullmq": "^5.0.0",
     "ioredis": "^5.4.0"
   },
