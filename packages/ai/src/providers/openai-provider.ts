@@ -1,4 +1,24 @@
+import { z } from 'zod';
 import type { IAIProvider, AIModelMessage, AICompletionOptions } from '../types.js';
+
+const OpenAIResponseSchema = z
+  .object({
+    choices: z
+      .array(
+        z
+          .object({
+            message: z
+              .object({
+                content: z.string().nullable().optional(),
+              })
+              .passthrough()
+              .optional(),
+          })
+          .passthrough(),
+      )
+      .optional(),
+  })
+  .passthrough();
 
 export class OpenAIProvider implements IAIProvider {
   public readonly name = 'openai';
@@ -36,7 +56,12 @@ export class OpenAIProvider implements IAIProvider {
       throw new Error(`OpenAI request failed: HTTP ${response.status} ${response.statusText}`);
     }
 
-    const data = (await response.json()) as any;
-    return data.choices?.[0]?.message?.content ?? '';
+    const rawData = await response.json();
+    const parsed = OpenAIResponseSchema.safeParse(rawData);
+    if (!parsed.success) {
+      throw new Error(`OpenAI response validation failed: ${parsed.error.message}`);
+    }
+
+    return parsed.data.choices?.[0]?.message?.content ?? '';
   }
 }

@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   AISecurityService,
   MockAIProvider,
+  OpenAIProvider,
+  AnthropicProvider,
+  GeminiProvider,
   PreAiRedactionFilter,
   AIContextBuilder,
 } from '../index.js';
@@ -84,5 +87,64 @@ describe('AISecurityService', () => {
     });
 
     expect(result).toBeNull();
+  });
+});
+
+describe('AI Providers Zod Validation', () => {
+  it('validates OpenAI provider completions', async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: 'test response from openai' } }],
+          }),
+          { status: 200 },
+        );
+
+      const provider = new OpenAIProvider('test-key');
+      const response = await provider.generateCompletion([{ role: 'user', content: 'hello' }]);
+      expect(response).toBe('test response from openai');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('validates Anthropic provider completions', async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async () =>
+        new Response(
+          JSON.stringify({
+            content: [{ type: 'text', text: 'test response from claude' }],
+          }),
+          { status: 200 },
+        );
+
+      const provider = new AnthropicProvider('test-key');
+      const response = await provider.generateCompletion([{ role: 'user', content: 'hello' }]);
+      expect(response).toBe('test response from claude');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('validates Gemini provider completions', async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async () =>
+        new Response(
+          JSON.stringify({
+            candidates: [{ content: { parts: [{ text: 'test response from gemini' }] } }],
+          }),
+          { status: 200 },
+        );
+
+      const provider = new GeminiProvider('test-key');
+      const response = await provider.generateCompletion([{ role: 'user', content: 'hello' }]);
+      expect(response).toBe('test response from gemini');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

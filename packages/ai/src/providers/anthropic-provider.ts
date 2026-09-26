@@ -1,4 +1,20 @@
+import { z } from 'zod';
 import type { IAIProvider, AIModelMessage, AICompletionOptions } from '../types.js';
+
+const AnthropicResponseSchema = z
+  .object({
+    content: z
+      .array(
+        z
+          .object({
+            type: z.string().optional(),
+            text: z.string().optional(),
+          })
+          .passthrough(),
+      )
+      .optional(),
+  })
+  .passthrough();
 
 export class AnthropicProvider implements IAIProvider {
   public readonly name = 'anthropic';
@@ -40,7 +56,12 @@ export class AnthropicProvider implements IAIProvider {
       throw new Error(`Anthropic request failed: HTTP ${response.status}`);
     }
 
-    const data = (await response.json()) as any;
-    return data.content?.[0]?.text ?? '';
+    const rawData = await response.json();
+    const parsed = AnthropicResponseSchema.safeParse(rawData);
+    if (!parsed.success) {
+      throw new Error(`Anthropic response validation failed: ${parsed.error.message}`);
+    }
+
+    return parsed.data.content?.[0]?.text ?? '';
   }
 }

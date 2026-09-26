@@ -1,4 +1,32 @@
+import { z } from 'zod';
 import type { IAIProvider, AIModelMessage, AICompletionOptions } from '../types.js';
+
+const GeminiResponseSchema = z
+  .object({
+    candidates: z
+      .array(
+        z
+          .object({
+            content: z
+              .object({
+                parts: z
+                  .array(
+                    z
+                      .object({
+                        text: z.string().optional(),
+                      })
+                      .passthrough(),
+                  )
+                  .optional(),
+              })
+              .passthrough()
+              .optional(),
+          })
+          .passthrough(),
+      )
+      .optional(),
+  })
+  .passthrough();
 
 export class GeminiProvider implements IAIProvider {
   public readonly name = 'gemini';
@@ -31,7 +59,12 @@ export class GeminiProvider implements IAIProvider {
       throw new Error(`Gemini request failed: HTTP ${response.status}`);
     }
 
-    const data = (await response.json()) as any;
-    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const rawData = await response.json();
+    const parsed = GeminiResponseSchema.safeParse(rawData);
+    if (!parsed.success) {
+      throw new Error(`Gemini response validation failed: ${parsed.error.message}`);
+    }
+
+    return parsed.data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   }
 }
