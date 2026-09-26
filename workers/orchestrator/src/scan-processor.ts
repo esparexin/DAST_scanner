@@ -1,9 +1,3 @@
-import {
-  SCAN_EVENTS_CHANNEL,
-  createRedisClient,
-  formatScanProgressEvent,
-  dispatchWebhook,
-} from '@securityscan/scanner-core';
 import type { OrganizationOverrides } from '@securityscan/payload-engine';
 import {
   FindingStatus,
@@ -14,10 +8,7 @@ import {
 import {
   ScanModel,
   TargetModel,
-  ProjectModel,
-  MembershipModel,
   FindingModel,
-  WebhookSubscriptionModel,
 } from '@securityscan/database';
 import { processPassiveAnalysis } from '@securityscan/worker-passive-analysis';
 import { runActiveTestingWorker } from '@securityscan/worker-active-testing';
@@ -27,79 +18,9 @@ import { runEvidenceWorker } from '@securityscan/worker-evidence';
 import { runReportingWorker } from '@securityscan/worker-reporting';
 import { scanMetrics } from '@securityscan/metrics';
 import { createLogger } from '@securityscan/shared';
+import { emitProgress, triggerScanWebhooks } from './scan-events.js';
 
 const logger = createLogger('scan-processor');
-
-let redisPublisher: ReturnType<typeof createRedisClient> | null = null;
-function getPublisher() {
-  if (!redisPublisher) {
-    redisPublisher = createRedisClient();
-    redisPublisher.connect().catch((err: unknown) => {
-      logger.warn({ err }, 'Failed to connect Redis publisher for scan events');
-    });
-  }
-  return redisPublisher;
-}
-
-async function emitProgress(
-  scanId: string,
-  phase: ScanStatus,
-  extra?: { message?: string; endpointsDiscovered?: number; findingsTotal?: number; findingsConfirmed?: number },
-): Promise<void> {
-  try {
-    const pub = getPublisher();
-    const event = formatScanProgressEvent(scanId, phase, extra);
-    await pub.publish(SCAN_EVENTS_CHANNEL, JSON.stringify(event));
-  } catch (err: unknown) {
-    logger.warn({ scanId, phase, err }, 'Failed to publish scan progress event');
-  }
-}
-
-async function triggerScanWebhooks(
-  scanId: string,
-  event: WebhookEvent,
-  data: Record<string, unknown>,
-): Promise<void> {
-  try {
-    const scan = await ScanModel.findById(scanId);
-    if (!scan) return;
-    const project = await ProjectModel.findById(scan.projectId);
-    if (!project) return;
-    const membership = await MembershipModel.findOne({ userId: project.ownerId });
-    if (!membership) return;
-
-    const target = await TargetModel.findById(scan.targetId);
-    const targetUrl = target?.baseUrl;
-
-    const subscriptions = await WebhookSubscriptionModel.find({
-      organizationId: membership.organizationId,
-      enabled: true,
-      events: event,
-    });
-
-    if (!subscriptions || subscriptions.length === 0) return;
-
-    const payload = {
-      event,
-      timestamp: new Date().toISOString(),
-      organizationId: membership.organizationId.toString(),
-      scanId,
-      targetUrl,
-      data,
-    };
-
-    await Promise.allSettled(
-      subscriptions.map((sub) =>
-        dispatchWebhook(
-          { url: sub.url, secret: sub.secret, format: sub.format as any },
-          payload,
-        ),
-      ),
-    );
-  } catch (err: any) {
-    logger.warn({ scanId, event, err: err?.message }, 'Failed to trigger scan webhooks');
-  }
-}
 
 export interface ScanJob {
   scanId: string;
