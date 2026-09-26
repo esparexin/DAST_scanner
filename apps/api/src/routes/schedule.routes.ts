@@ -9,10 +9,12 @@ import {
   AuthorizationState,
   ScanProfile,
   SubscriptionTier,
+  CreateScheduleSchema,
 } from '@securityscan/contracts';
 import { checkScanQuota } from '../services/quota.service.js';
 import { authenticate } from '../middleware/auth.js';
 import { resolveTenant, requireOrgRole, type TenantRequest } from '../middleware/tenant.js';
+import { validate } from '../middleware/validate.js';
 import { resolveCronPattern, executeScheduledScan } from '../services/schedule.service.js';
 
 export const scheduleRouter = Router();
@@ -56,19 +58,10 @@ scheduleRouter.get('/:id', async (req: TenantRequest, res, next) => {
 scheduleRouter.post(
   '/',
   requireOrgRole([OrgRole.ORG_ADMIN, OrgRole.SECURITY_LEAD]),
+  validate(CreateScheduleSchema),
   async (req: TenantRequest, res, next) => {
     try {
       const { name, projectId, targetId, frequency, cron, profile, enabled } = req.body;
-
-      if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Schedule name is required' } });
-        return;
-      }
-
-      if (!projectId || !targetId) {
-        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'projectId and targetId are required' } });
-        return;
-      }
 
       // Verify project exists and user has access
       const project = await ProjectModel.findOne({ _id: projectId });

@@ -5,3 +5,5 @@ export * from './scope.schema.js';
 export * from './auth-profile.schema.js';
 export * from './finding.schema.js';
 export * from './report.schema.js';
+export * from './webhook.schema.js';
+export * from './schedule.schema.js';

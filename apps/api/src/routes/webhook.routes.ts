@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import crypto from 'node:crypto';
 import { WebhookSubscriptionModel } from '@securityscan/database';
-import { OrgRole, WebhookEvent, WebhookFormat } from '@securityscan/contracts';
+import { OrgRole, WebhookEvent, WebhookFormat, CreateWebhookSchema } from '@securityscan/contracts';
 import { authenticate } from '../middleware/auth.js';
 import { resolveTenant, requireOrgRole, type TenantRequest } from '../middleware/tenant.js';
+import { validate } from '../middleware/validate.js';
 import { dispatchWebhook } from '../services/webhook.service.js';
 
 export const webhookRouter = Router();
@@ -40,53 +41,23 @@ webhookRouter.get('/', async (req: TenantRequest, res, next) => {
 webhookRouter.post(
   '/',
   requireOrgRole([OrgRole.ORG_ADMIN, OrgRole.SECURITY_LEAD]),
+  validate(CreateWebhookSchema),
   async (req: TenantRequest, res, next) => {
     try {
-      const { name, url, events, format, enabled, secret } = req.body;
+      const { name, url, events, format, enabled, secret } = req.body as import('@securityscan/contracts').CreateWebhookInput;
 
-      if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Webhook name is required' } });
-        return;
-      }
-
-      if (!url || typeof url !== 'string') {
-        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Webhook URL is required' } });
-        return;
-      }
-
-      try {
-        const parsed = new URL(url);
-        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-          res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Webhook URL must use HTTP or HTTPS' } });
-          return;
-        }
-      } catch {
-        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid Webhook URL format' } });
-        return;
-      }
-
-      const validEvents = Array.isArray(events)
-        ? events.filter((e) => Object.values(WebhookEvent).includes(e))
-        : [WebhookEvent.SCAN_COMPLETED, WebhookEvent.SCAN_FAILED];
-
-      if (validEvents.length === 0) {
-        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'At least one valid WebhookEvent is required' } });
-        return;
-      }
-
-      const webhookFormat = Object.values(WebhookFormat).includes(format) ? format : WebhookFormat.GENERIC;
       const generatedSecret =
-        secret && typeof secret === 'string' && secret.length >= 16
+        secret && secret.length >= 16
           ? secret
           : `whsec_${crypto.randomBytes(24).toString('hex')}`;
 
       const created = await WebhookSubscriptionModel.create({
         organizationId: req.organizationId,
-        name: name.trim(),
-        url: url.trim(),
+        name,
+        url,
         secret: generatedSecret,
-        events: validEvents,
-        format: webhookFormat,
+        events,
+        format: format ?? WebhookFormat.GENERIC,
         enabled: enabled ?? true,
       });
 
