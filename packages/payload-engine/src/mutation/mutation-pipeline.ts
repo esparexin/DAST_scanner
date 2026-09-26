@@ -96,10 +96,10 @@ export class MutationPipeline {
   private applyTransformation(val: string, type: TransformationType): string {
     switch (type) {
       case 'URL_ENCODE':
-        return encodeURIComponent(val);
+        return encodeURIComponent(val).replace(/'/g, '%27');
 
       case 'DOUBLE_URL_ENCODE':
-        return encodeURIComponent(encodeURIComponent(val));
+        return encodeURIComponent(encodeURIComponent(val).replace(/'/g, '%27'));
 
       case 'HTML_ENTITY':
         return val

@@ -31,6 +31,10 @@ export interface CheckResult {
   cwe: string[];
   owasp: string[];
   apiOwasp: string[];
+  wstg?: string[];
+  asvs?: string[];
+  cvssVector?: string;
+  cvssScore?: number;
   references: string[];
   evidence: {
     request: { method: string; url: string; headers: Record<string, string>; body?: string };

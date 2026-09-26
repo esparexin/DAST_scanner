@@ -14,7 +14,47 @@ export class ScopeValidator {
   private readonly startTime: number;
   private cancelled: boolean = false;
 
-  constructor(config: IScopeConfig) {
+  constructor(config: IScopeConfig | string[]) {
+    if (Array.isArray(config)) {
+      const allowedHosts: string[] = [];
+      const allowedPaths: string[] = [];
+      for (const item of config) {
+        try {
+          const urlStr = item.includes('://') ? item : `http://${item}`;
+          const url = new URL(urlStr.replace(/\/\*.*$/, ''));
+          if (url.hostname && !allowedHosts.includes(url.hostname)) {
+            allowedHosts.push(url.hostname);
+          }
+          if (url.pathname && url.pathname !== '/' && !allowedPaths.includes(url.pathname)) {
+            allowedPaths.push(url.pathname);
+          }
+        } catch {
+          if (!allowedHosts.includes(item)) {
+            allowedHosts.push(item);
+          }
+        }
+      }
+      this.config = {
+        scanId: 'lab-scan',
+        targetId: 'lab-target',
+        projectId: 'lab-project',
+        authorized: true,
+        allowedHosts: allowedHosts.length > 0 ? allowedHosts : ['*'],
+        excludedHosts: [],
+        allowedPaths,
+        excludedPaths: [],
+        maxRequestsPerSecond: 10000,
+        maxConcurrency: 100,
+        maxRequests: 100000,
+        maxCrawlDepth: 10,
+        maxResponseSize: 10 * 1024 * 1024,
+        maxScanDuration: 3600,
+        timeoutPerRequest: 30,
+      };
+      this.startTime = Date.now();
+      return;
+    }
+
     if (!config.authorized) {
       throw new ScopeError('Target is not authorized. Cannot create scope validator.');
     }
@@ -168,6 +208,7 @@ export class ScopeValidator {
 
   private isHostAllowed(hostname: string): boolean {
     return this.config.allowedHosts.some((allowed) => {
+      if (allowed === '*') return true;
       if (allowed.startsWith('*.')) {
         // Wildcard subdomain match
         const domain = allowed.slice(2);

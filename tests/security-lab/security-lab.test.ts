@@ -505,7 +505,7 @@ describe('Catalog Integrity Regression', () => {
   it('payload count matches expected baseline count', () => {
     const registry = new PayloadRegistry();
     loadDefaultCatalogs(registry);
-    // 2 SQLi + 2 XSS + 1 Traversal + 1 Auth = 6 baseline payloads
-    expect(registry.size()).toBe(6);
+    // 2 SQLi + 2 XSS + 1 Traversal + 1 Auth + 2 NoSQL + 2 SSTI + 2 XXE = 12 baseline payloads
+    expect(registry.size()).toBe(12);
   });
 });

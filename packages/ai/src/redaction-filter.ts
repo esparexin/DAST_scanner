@@ -10,37 +10,31 @@ const API_KEY_REGEX =
 export class PreAiRedactionFilter {
   private redactedFields: string[] = [];
 
-  redact(request: AIAnalysisRequest): AIAnalysisRequest {
-    this.redactedFields = [];
-    const serialized = JSON.stringify(request);
+  static redact(input: string): string;
+  static redact(input: AIAnalysisRequest): AIAnalysisRequest;
+  static redact(input: string | AIAnalysisRequest): string | AIAnalysisRequest {
+    if (typeof input === 'string') {
+      let cleaned = input;
+      cleaned = cleaned.replace(CREDIT_CARD_REGEX, '[REDACTED_BY_AI_GATE]');
+      cleaned = cleaned.replace(SSN_REGEX, '[REDACTED_BY_AI_GATE]');
+      cleaned = cleaned.replace(EMAIL_REGEX, '[REDACTED_BY_AI_GATE]');
+      cleaned = cleaned.replace(JWT_REGEX, '[REDACTED_BY_AI_GATE]');
+      cleaned = cleaned.replace(API_KEY_REGEX, '$1[REDACTED_BY_AI_GATE]');
+      return cleaned;
+    }
+
+    const serialized = JSON.stringify(input);
     let cleaned = serialized;
-
-    if (CREDIT_CARD_REGEX.test(cleaned)) {
-      cleaned = cleaned.replace(CREDIT_CARD_REGEX, '[REDACTED_CC]');
-      this.redactedFields.push('credit_card');
-    }
-
-    if (SSN_REGEX.test(cleaned)) {
-      cleaned = cleaned.replace(SSN_REGEX, '[REDACTED_SSN]');
-      this.redactedFields.push('ssn');
-    }
-
-    if (EMAIL_REGEX.test(cleaned)) {
-      cleaned = cleaned.replace(EMAIL_REGEX, '[REDACTED_EMAIL]');
-      this.redactedFields.push('email');
-    }
-
-    if (JWT_REGEX.test(cleaned)) {
-      cleaned = cleaned.replace(JWT_REGEX, '[REDACTED_JWT]');
-      this.redactedFields.push('jwt');
-    }
-
-    if (API_KEY_REGEX.test(cleaned)) {
-      cleaned = cleaned.replace(API_KEY_REGEX, '$1[REDACTED_KEY]');
-      this.redactedFields.push('api_key');
-    }
-
+    cleaned = cleaned.replace(CREDIT_CARD_REGEX, '[REDACTED_BY_AI_GATE]');
+    cleaned = cleaned.replace(SSN_REGEX, '[REDACTED_BY_AI_GATE]');
+    cleaned = cleaned.replace(EMAIL_REGEX, '[REDACTED_BY_AI_GATE]');
+    cleaned = cleaned.replace(JWT_REGEX, '[REDACTED_BY_AI_GATE]');
+    cleaned = cleaned.replace(API_KEY_REGEX, '$1[REDACTED_BY_AI_GATE]');
     return JSON.parse(cleaned);
+  }
+
+  redact(request: AIAnalysisRequest): AIAnalysisRequest {
+    return PreAiRedactionFilter.redact(request);
   }
 
   /**
@@ -60,7 +54,7 @@ export class PreAiRedactionFilter {
           parsed.searchParams.set(name, '[REDACTED]');
         }
       }
-      return parsed.toString();
+      return parsed.toString().replace(/%5BREDACTED%5D/g, '[REDACTED]');
     } catch {
       return '[REDACTED_URL]';
     }

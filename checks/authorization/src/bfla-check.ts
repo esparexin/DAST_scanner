@@ -1,5 +1,5 @@
 import type { SecurityCheck, CheckContext, CheckResult } from '@securityscan/detection-engine';
-import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod } from '@securityscan/contracts';
+import { DetectionCategory, DetectionType, Severity, Confidence } from '@securityscan/contracts';
 
 export class BflaChecks {
   static getChecks(): SecurityCheck[] {

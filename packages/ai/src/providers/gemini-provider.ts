@@ -3,7 +3,7 @@ import type { IAIProvider, AIModelMessage, AICompletionOptions } from '../types.
 export class GeminiProvider implements IAIProvider {
   public readonly name = 'gemini';
   private readonly apiKey: string;
-  private readonly model: string;
+  public readonly model: string;
 
   constructor(apiKey?: string, model: string = 'gemini-1.5-flash') {
     this.apiKey = apiKey ?? process.env['GEMINI_API_KEY'] ?? '';

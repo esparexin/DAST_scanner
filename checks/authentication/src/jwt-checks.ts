@@ -1,6 +1,6 @@
 import type { SecurityCheck, CheckContext, CheckResult } from '@securityscan/detection-engine';
 import { JwtAnalyzer } from './jwt-analyzer.js';
-import { DetectionCategory, DetectionType, Severity, Confidence, HttpMethod } from '@securityscan/contracts';
+import { DetectionCategory, DetectionType, Severity, Confidence } from '@securityscan/contracts';
 
 export class JwtSecurityChecks {
   static getChecks(bearerToken?: string): SecurityCheck[] {

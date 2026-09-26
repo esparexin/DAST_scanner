@@ -63,7 +63,9 @@ export class AIPayloadAdvisor {
     request: PayloadRecommendationRequest,
   ): Promise<PayloadRecommendation> {
     const prompt = this.buildPrompt(request);
-    const rawResponse = await this.provider.complete(prompt);
+    const rawResponse = this.provider.complete
+      ? await this.provider.complete(prompt)
+      : await this.provider.generateCompletion([{ role: 'user', content: prompt }]);
 
     try {
       const parsed = JSON.parse(rawResponse);
@@ -72,7 +74,7 @@ export class AIPayloadAdvisor {
       return {
         ...validated,
         provider: this.provider.name,
-        modelUsed: this.provider.model,
+        modelUsed: this.provider.model ?? this.provider.name,
       };
     } catch {
       logger.warn('AI recommendation response could not be parsed, returning empty recommendation');
@@ -83,7 +85,7 @@ export class AIPayloadAdvisor {
         priorityOrder: [],
         skipReasons: {},
         provider: this.provider.name,
-        modelUsed: this.provider.model,
+        modelUsed: this.provider.model ?? this.provider.name,
       };
     }
   }

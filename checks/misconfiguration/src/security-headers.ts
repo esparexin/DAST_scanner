@@ -9,7 +9,7 @@ const cspRule = PASSIVE_RULES.find((r) => r.id === 'SEC-HDR-004')!;
 
 function buildResult(
   rule: typeof hstsRule,
-  ctx: CheckContext,
+  _ctx: CheckContext,
   response: { statusCode: number; headers: Record<string, string>; body: string; responseTime: number },
   requestUrl: string,
 ): CheckResult {

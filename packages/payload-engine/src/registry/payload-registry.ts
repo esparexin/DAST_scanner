@@ -33,6 +33,10 @@ export class PayloadRegistry {
     return this.getAll('ACTIVE');
   }
 
+  size(): number {
+    return this.index.getAll().length;
+  }
+
   getIndex(): PayloadContextIndex {
     return this.index;
   }

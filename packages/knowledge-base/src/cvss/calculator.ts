@@ -78,7 +78,8 @@ export function calculateCvss31(metrics: CvssMetrics): CvssCalculationResult {
   const pr = PR_WEIGHTS[metrics.scope][metrics.privilegesRequired];
   const ui = UI_WEIGHTS[metrics.userInteraction];
 
-  const exploitability = roundup(8.22 * av * ac * pr * ui);
+  const exploitabilityRaw = 8.22 * av * ac * pr * ui;
+  const exploitability = roundup(exploitabilityRaw);
 
   const c = IMPACT_WEIGHTS[metrics.confidentiality];
   const i = IMPACT_WEIGHTS[metrics.integrity];
@@ -86,19 +87,20 @@ export function calculateCvss31(metrics: CvssMetrics): CvssCalculationResult {
 
   const iss = 1 - (1 - c) * (1 - i) * (1 - a);
 
-  let impact: number;
+  let impactRaw: number;
   if (metrics.scope === 'UNCHANGED') {
-    impact = roundup(6.42 * iss);
+    impactRaw = 6.42 * iss;
   } else {
-    impact = roundup(7.52 * (iss - 0.029) - 3.25 * Math.pow(iss - 0.02, 15));
+    impactRaw = 7.52 * (iss - 0.029) - 3.25 * Math.pow(iss - 0.02, 15);
   }
+  const impact = roundup(impactRaw);
 
   let baseScore = 0;
-  if (impact > 0) {
+  if (impactRaw > 0) {
     if (metrics.scope === 'UNCHANGED') {
-      baseScore = Math.min(10.0, roundup(impact + exploitability));
+      baseScore = Math.min(10.0, roundup(impactRaw + exploitabilityRaw));
     } else {
-      baseScore = Math.min(10.0, roundup(1.08 * (impact + exploitability)));
+      baseScore = Math.min(10.0, roundup(1.08 * (impactRaw + exploitabilityRaw)));
     }
   }
 

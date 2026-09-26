@@ -25,6 +25,7 @@
     "@securityscan/http-client": "workspace:*",
     "@securityscan/knowledge-base": "workspace:*",
     "@securityscan/shared": "workspace:*",
+    "@securityscan/api-parser": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

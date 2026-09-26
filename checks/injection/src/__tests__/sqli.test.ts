@@ -11,7 +11,7 @@ describe('SqlInjectionChecks', () => {
       request: vi.fn().mockResolvedValue({
         statusCode: 500,
         headers: { 'content-type': 'text/plain' },
-        body: 'PostgreSQL: syntax error at or near "\\'" at line 1',
+        body: 'PostgreSQL: syntax error at or near "\'" at line 1',
         responseTime: 45,
       }),
     };

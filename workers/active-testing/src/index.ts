@@ -1,5 +1,5 @@
 import { ScanModel, TargetModel, EndpointModel, FindingModel } from '@securityscan/database';
-import { ScanStatus, HttpMethod } from '@securityscan/contracts';
+import { ScanStatus } from '@securityscan/contracts';
 import { ScopeGuard } from '@securityscan/scope';
 import { SecureHttpClient, RateLimiter } from '@securityscan/http-client';
 import { DetectionEngine } from '@securityscan/detection-engine';

@@ -1,6 +1,6 @@
-import { Worker, type Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { ScanModel, TargetModel, EndpointModel } from '@securityscan/database';
-import { ScanStatus, HttpMethod, ScopeValidationResult } from '@securityscan/contracts';
+import { ScanStatus, HttpMethod } from '@securityscan/contracts';
 import { ScopeGuard } from '@securityscan/scope';
 import { SecureHttpClient, RateLimiter } from '@securityscan/http-client';
 import { Crawler } from '@securityscan/crawler';

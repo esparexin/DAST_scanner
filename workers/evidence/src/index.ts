@@ -1,4 +1,4 @@
-import { ScanModel, FindingModel } from '@securityscan/database';
+import { FindingModel } from '@securityscan/database';
 import { FindingStatus } from '@securityscan/contracts';
 import { AISecurityService, MockAIProvider, OpenAIProvider, GeminiProvider, AnthropicProvider } from '@securityscan/ai';
 import { createLogger } from '@securityscan/shared';

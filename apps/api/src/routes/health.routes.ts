@@ -1,14 +1,13 @@
 import { Router } from 'express';
-import mongoose from 'mongoose';
+import { isDatabaseConnected } from '@securityscan/database';
 
 export const healthRouter = Router();
 
 healthRouter.get('/', (_req, res) => {
-  const mongoState = mongoose.connection.readyState;
-  const healthy = mongoState === 1;
+  const healthy = isDatabaseConnected();
   res.status(healthy ? 200 : 503).json({
     status: healthy ? 'healthy' : 'unhealthy',
-    mongodb: mongoState === 1 ? 'connected' : 'disconnected',
+    mongodb: healthy ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
   });
 });

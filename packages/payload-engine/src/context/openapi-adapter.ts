@@ -1,4 +1,4 @@
-import type { ApplicableParameterType, TargetReflectionContext } from '../types/payload-definition.js';
+import type { ApplicableParameterType } from '../types/payload-definition.js';
 import type { NormalizedApiEndpoint } from '@securityscan/api-parser';
 
 export interface InferredParameterConstraint {
@@ -16,7 +16,7 @@ export interface InferredParameterConstraint {
  */
 export class OpenApiParameterAdapter {
   static mapSchemaToConstraints(endpoint: NormalizedApiEndpoint, paramName: string): InferredParameterConstraint {
-    const param = endpoint.parameters.find((p) => p.name === paramName);
+    const param = endpoint.parameters.find((p: any) => p.name === paramName);
     if (!param) {
       return {
         name: paramName,

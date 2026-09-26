@@ -12,7 +12,7 @@ export interface ExcessiveDataFinding {
 }
 
 const SENSITIVE_KEY_PATTERNS = [
-  { pattern: /^(password|passwd|pwd|pass_hash|secret|private_key)$/i, reason: 'Credential field exposed in API response', severity: 'CRITICAL' as const },
+  { pattern: /^(password|passwd|pwd|pass_?hash|password_?hash|secret|private_?key)$/i, reason: 'Credential field exposed in API response', severity: 'CRITICAL' as const },
   { pattern: /^(ssn|social_security|national_id|tax_id)$/i, reason: 'Government/National identifier exposed in API response', severity: 'CRITICAL' as const },
   { pattern: /^(credit_?card|card_?number|cvv|cvc)$/i, reason: 'Financial cardholder information exposed in response', severity: 'CRITICAL' as const },
   { pattern: /^(auth_?token|api_?key|access_?token|refresh_?token|session_?token)$/i, reason: 'Security token or API secret exposed in response', severity: 'CRITICAL' as const },

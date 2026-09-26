@@ -6,7 +6,6 @@ import { DetectionEngine } from '@securityscan/detection-engine';
 import { FindingEngine } from '@securityscan/finding-engine';
 import { SecurityHeaderChecks, CookieChecks, CorsChecks, InfoDisclosureChecks } from '@securityscan/check-misconfiguration';
 import { createLogger } from '@securityscan/shared';
-import type { TargetModel } from '@securityscan/database';
 
 const logger = createLogger('worker-passive');
 

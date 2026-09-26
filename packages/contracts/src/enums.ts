@@ -39,9 +39,9 @@ export enum ScanProfile {
   PRODUCTION_SAFE = 'PRODUCTION_SAFE',
   SECURITY_LAB = 'SECURITY_LAB',
   // Backward-compatible aliases
-  LIGHT = 'LIGHT',
-  STANDARD = 'STANDARD',
-  AGGRESSIVE = 'AGGRESSIVE',
+  LIGHT = 'QUICK',
+  STANDARD = 'WEB_STANDARD',
+  AGGRESSIVE = 'FULL_ASSESSMENT',
 }
 
 // === Severity & Confidence ===

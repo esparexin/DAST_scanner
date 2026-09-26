@@ -3,7 +3,7 @@ import type { IAIProvider, AIModelMessage, AICompletionOptions } from '../types.
 export class AnthropicProvider implements IAIProvider {
   public readonly name = 'anthropic';
   private readonly apiKey: string;
-  private readonly model: string;
+  public readonly model: string;
 
   constructor(apiKey?: string, model: string = 'claude-3-5-sonnet-20241022') {
     this.apiKey = apiKey ?? process.env['ANTHROPIC_API_KEY'] ?? '';

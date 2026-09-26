@@ -19,11 +19,11 @@ export class SecureHttpClient {
 
   constructor(
     scopeValidator: ScopeValidator,
-    rateLimiter: RateLimiter,
+    rateLimiter?: RateLimiter,
     config?: IHttpClientConfig,
   ) {
     this.scopeValidator = scopeValidator;
-    this.rateLimiter = rateLimiter;
+    this.rateLimiter = rateLimiter ?? new RateLimiter(1000);
     this.config = {
       baseHeaders: config?.baseHeaders ?? {},
       timeout: config?.timeout ?? 30000,

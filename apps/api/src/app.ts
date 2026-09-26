@@ -1,15 +1,15 @@
 import express from 'express';
 import cors from 'cors';
-import { healthRoutes } from './routes/health.routes.js';
-import { authRoutes } from './routes/auth.routes.js';
-import { projectRoutes } from './routes/project.routes.js';
-import { targetRoutes } from './routes/target.routes.js';
-import { scanRoutes } from './routes/scan.routes.js';
-import { findingRoutes } from './routes/finding.routes.js';
-import { reportRoutes } from './routes/report.routes.js';
-import { endpointRoutes } from './routes/endpoint.routes.js';
-import { authProfileRoutes } from './routes/auth-profile.routes.js';
-import { apiSchemaRoutes } from './routes/api-schema.routes.js';
+import { healthRouter } from './routes/health.routes.js';
+import { authRouter } from './routes/auth.routes.js';
+import { projectRouter } from './routes/project.routes.js';
+import { targetRouter } from './routes/target.routes.js';
+import { scanRouter } from './routes/scan.routes.js';
+import { findingRouter } from './routes/finding.routes.js';
+import { reportRouter } from './routes/report.routes.js';
+import { endpointRouter } from './routes/endpoint.routes.js';
+import { authProfileRouter } from './routes/auth-profile.routes.js';
+import { apiSchemaRouter } from './routes/api-schema.routes.js';
 import { metricsRoutes } from './routes/metrics.routes.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -21,16 +21,16 @@ export function createApp() {
   app.use(express.json({ limit: '10mb' }));
 
   // Routes
-  app.use('/api/health', healthRoutes);
-  app.use('/api/auth', authRoutes);
-  app.use('/api/projects', projectRoutes);
-  app.use('/api/targets', targetRoutes);
-  app.use('/api/scans', scanRoutes);
-  app.use('/api/findings', findingRoutes);
-  app.use('/api/reports', reportRoutes);
-  app.use('/api/endpoints', endpointRoutes);
-  app.use('/api/auth-profiles', authProfileRoutes);
-  app.use('/api/apis', apiSchemaRoutes);
+  app.use('/api/health', healthRouter);
+  app.use('/api/auth', authRouter);
+  app.use('/api/projects', projectRouter);
+  app.use('/api/targets', targetRouter);
+  app.use('/api/scans', scanRouter);
+  app.use('/api/findings', findingRouter);
+  app.use('/api/reports', reportRouter);
+  app.use('/api/endpoints', endpointRouter);
+  app.use('/api/auth-profiles', authProfileRouter);
+  app.use('/api/apis', apiSchemaRouter);
   app.use('/api/metrics', metricsRoutes);
   app.use('/api/audit', auditRoutes);
 

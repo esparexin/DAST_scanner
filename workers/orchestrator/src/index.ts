@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq';
+import { Worker, type Job } from 'bullmq';
 import { connectDatabase } from '@securityscan/database';
 import { SCAN_QUEUE_NAME } from '@securityscan/scanner-core';
 import { createLogger } from '@securityscan/shared';
@@ -12,7 +12,7 @@ async function main() {
 
   const worker = new Worker(
     SCAN_QUEUE_NAME,
-    async (job) => {
+    async (job: Job) => {
       logger.info({ jobId: job.id, scanId: job.data.scanId }, 'Processing scan job');
       await processScan(job.data.scanId as string);
     },
@@ -25,11 +25,11 @@ async function main() {
     },
   );
 
-  worker.on('completed', (job) => {
+  worker.on('completed', (job: Job) => {
     logger.info({ jobId: job.id }, 'Scan job completed');
   });
 
-  worker.on('failed', (job, error) => {
+  worker.on('failed', (job: Job | undefined, error: Error) => {
     logger.error({ jobId: job?.id, error: error.message }, 'Scan job failed');
   });
 

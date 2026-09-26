@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-export type CanaryType = 'ALPHANUMERIC' | 'NUMERIC' | 'TAG_NAME' | 'UUID_LIKE';
+export type CanaryType = 'ALPHANUMERIC' | 'NUMERIC' | 'TAG_NAME' | 'UUID_LIKE' | 'RANDOM_TAG';
 
 export interface GeneratedCanary {
   token: string;
@@ -30,6 +30,7 @@ export class CanaryGenerator {
         pattern = numNonce;
         break;
       }
+      case 'RANDOM_TAG':
       case 'TAG_NAME': {
         token = `${prefix}${nonce}`;
         pattern = `<${token}>`;

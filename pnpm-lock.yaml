@@ -38,12 +38,24 @@ importers:
 
   apps/api:
     dependencies:
+      '@securityscan/authentication':
+        specifier: workspace:*
+        version: link:../../packages/authentication
       '@securityscan/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@securityscan/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@securityscan/metrics':
+        specifier: workspace:*
+        version: link:../../packages/metrics
+      '@securityscan/openapi':
+        specifier: workspace:*
+        version: link:../../packages/openapi
+      '@securityscan/reporting':
+        specifier: workspace:*
+        version: link:../../packages/reporting
       '@securityscan/scanner-core':
         specifier: workspace:*
         version: link:../../packages/scanner-core
@@ -545,6 +557,9 @@ importers:
       '@securityscan/http-client':
         specifier: workspace:*
         version: link:../http-client
+      '@securityscan/scope':
+        specifier: workspace:*
+        version: link:../scope
       '@securityscan/shared':
         specifier: workspace:*
         version: link:../shared
@@ -803,6 +818,9 @@ importers:
 
   packages/payload-engine:
     dependencies:
+      '@securityscan/api-parser':
+        specifier: workspace:*
+        version: link:../api-parser
       '@securityscan/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -1308,6 +1326,9 @@ importers:
       '@securityscan/crawler':
         specifier: workspace:*
         version: link:../../packages/crawler
+      '@securityscan/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@securityscan/detection-engine':
         specifier: workspace:*
         version: link:../../packages/detection-engine
@@ -1338,6 +1359,30 @@ importers:
       '@securityscan/verification-engine':
         specifier: workspace:*
         version: link:../../packages/verification-engine
+      '@securityscan/worker-active-testing':
+        specifier: workspace:*
+        version: link:../active-testing
+      '@securityscan/worker-api-testing':
+        specifier: workspace:*
+        version: link:../api-testing
+      '@securityscan/worker-discovery':
+        specifier: workspace:*
+        version: link:../discovery
+      '@securityscan/worker-evidence':
+        specifier: workspace:*
+        version: link:../evidence
+      '@securityscan/worker-passive-analysis':
+        specifier: workspace:*
+        version: link:../passive-analysis
+      '@securityscan/worker-reporting':
+        specifier: workspace:*
+        version: link:../reporting
+      '@securityscan/worker-verification':
+        specifier: workspace:*
+        version: link:../verification
+      bullmq:
+        specifier: ^5.0.0
+        version: 5.81.5
     devDependencies:
       typescript:
         specifier: ^5.5.0

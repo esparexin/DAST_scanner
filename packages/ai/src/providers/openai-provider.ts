@@ -3,7 +3,7 @@ import type { IAIProvider, AIModelMessage, AICompletionOptions } from '../types.
 export class OpenAIProvider implements IAIProvider {
   public readonly name = 'openai';
   private readonly apiKey: string;
-  private readonly model: string;
+  public readonly model: string;
   private readonly baseUrl: string;
 
   constructor(apiKey?: string, model: string = 'gpt-4o-mini', baseUrl: string = 'https://api.openai.com/v1') {

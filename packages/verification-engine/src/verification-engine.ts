@@ -1,5 +1,6 @@
 import type { SecureHttpClient } from '@securityscan/http-client';
 import type { IPayloadDefinition, MaterializedTestVariant } from '@securityscan/payload-engine';
+import { HttpMethod } from '@securityscan/contracts';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('verification-engine');
@@ -49,7 +50,7 @@ export class VerificationEngine {
     for (let i = 0; i < attempts; i++) {
       try {
         const response = await this.httpClient.request({
-          method: request.method as 'GET' | 'POST',
+          method: request.method as HttpMethod,
           url: request.endpoint,
         });
 
@@ -130,7 +131,7 @@ export class VerificationEngine {
     for (let i = 0; i < attempts; i++) {
       try {
         const res = await this.httpClient.request({
-          method: method as 'GET' | 'POST',
+          method: method as HttpMethod,
           url: fullUrl,
         });
 
@@ -184,11 +185,12 @@ export class VerificationEngine {
     for (let i = 0; i < attempts; i++) {
       try {
         const res = await this.httpClient.request({
-          method: method as 'GET' | 'POST',
+          method: method as HttpMethod,
           url: fullUrl,
         });
 
-        if (res.body.includes(variant.canaryToken)) {
+        const expected = variant.finalValue || variant.canaryToken;
+        if (res.body.includes(expected)) {
           matchCount++;
         }
       } catch {
@@ -228,7 +230,7 @@ export class VerificationEngine {
     for (let i = 0; i < attempts; i++) {
       try {
         const res = await this.httpClient.request({
-          method: method as 'GET' | 'POST',
+          method: method as HttpMethod,
           url: fullUrl,
         });
 
@@ -273,7 +275,7 @@ export class VerificationEngine {
       try {
         const start = Date.now();
         await this.httpClient.request({
-          method: method as 'GET' | 'POST',
+          method: method as HttpMethod,
           url: fullUrl,
         });
         const elapsed = Date.now() - start;

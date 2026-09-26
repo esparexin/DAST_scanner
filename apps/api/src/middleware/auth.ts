@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserModel } from '@securityscan/database';
 
 const JWT_SECRET = process.env['JWT_SECRET'] ?? 'change-me-in-production';
 

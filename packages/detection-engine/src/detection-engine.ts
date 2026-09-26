@@ -11,6 +11,10 @@ export class DetectionEngine {
     logger.debug({ ruleId: check.rule.id, name: check.rule.name }, 'Check registered');
   }
 
+  registerCheck(check: SecurityCheck): void {
+    this.register(check);
+  }
+
   registerAll(checks: SecurityCheck[]): void {
     for (const check of checks) {
       this.register(check);
@@ -41,5 +45,9 @@ export class DetectionEngine {
     }
 
     return results;
+  }
+
+  async run(context: CheckContext, categories?: string[]): Promise<CheckResult[]> {
+    return this.runAll(context, categories);
   }
 }

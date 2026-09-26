@@ -3,4 +3,8 @@ export { AIPayloadAdvisor } from './payload-advisor.js';
 export type { PayloadRecommendationRequest, PayloadRecommendation } from './payload-advisor.js';
 export { PreAiRedactionFilter } from './redaction-filter.js';
 export { AIContextBuilder } from './context-builder.js';
+export { MockAIProvider } from './providers/mock-provider.js';
+export { OpenAIProvider } from './providers/openai-provider.js';
+export { GeminiProvider } from './providers/gemini-provider.js';
+export { AnthropicProvider } from './providers/anthropic-provider.js';
 export type { AIProvider, AIAnalysisRequest, AIAnalysisResponse } from './types.js';

@@ -42,9 +42,18 @@
     "@securityscan/knowledge-base": "workspace:*",
     "@securityscan/payload-engine": "workspace:*",
     "@securityscan/risk-engine": "workspace:*",
+    "@securityscan/database": "workspace:*",
+    "@securityscan/worker-discovery": "workspace:*",
+    "@securityscan/worker-passive-analysis": "workspace:*",
+    "@securityscan/worker-active-testing": "workspace:*",
+    "@securityscan/worker-api-testing": "workspace:*",
+    "@securityscan/worker-verification": "workspace:*",
+    "@securityscan/worker-evidence": "workspace:*",
+    "@securityscan/worker-reporting": "workspace:*",
     "@securityscan/scanner-core": "workspace:*",
     "@securityscan/shared": "workspace:*",
-    "@securityscan/verification-engine": "workspace:*"
+    "@securityscan/verification-engine": "workspace:*",
+    "bullmq": "^5.0.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

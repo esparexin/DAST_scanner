@@ -1,4 +1,4 @@
-import { DetectionCategory, Severity, Confidence } from '@securityscan/contracts';
+import { DetectionCategory } from '@securityscan/contracts';
 
 export type PayloadSafetyLevel = 'SAFE' | 'BOUNDED_ACTIVE' | 'POTENTIALLY_DISRUPTIVE';
 
@@ -14,7 +14,8 @@ export type ApplicableParameterType =
   | 'url'
   | 'json'
   | 'array'
-  | 'file';
+  | 'file'
+  | 'xml';
 
 export type ParameterLocation = 'query' | 'body' | 'path' | 'header' | 'cookie';
 
@@ -27,7 +28,8 @@ export type TargetReflectionContext =
   | 'HEADER_VALUE'
   | 'SQL_CLAUSE'
   | 'COMMAND_ARGUMENT'
-  | 'FILE_PATH';
+  | 'FILE_PATH'
+  | 'XML_VALUE';
 
 export type TransformationType =
   | 'NONE'
@@ -52,7 +54,9 @@ export type VerificationStrategy =
   | 'REPLAY_PROBE_CONFIRMATION'
   | 'INVERSE_PROBE_CONFIRMATION'
   | 'TOKEN_EQUIVALENCE'
-  | 'STATUS_CODE_STABILITY';
+  | 'STATUS_CODE_STABILITY'
+  | 'TIMING_CONFIRMATION'
+  | 'BEHAVIORAL_REPLAY';
 
 export interface IPayloadRegressionTest {
   targetFixtureId: string;
@@ -95,6 +99,7 @@ export interface IPayloadDefinition {
     errorSignatures?: string[];
     expectedStatusCodes?: number[];
     bodyIndicators?: string[];
+    timingThresholdMs?: number;
   };
 
   verification: {
@@ -116,7 +121,8 @@ export interface IPayloadDefinition {
   };
 
   remediation: {
-    summary: string;
+    concept?: string;
+    summary?: string;
     guidance: string;
     defenseInDepth: string[];
   };

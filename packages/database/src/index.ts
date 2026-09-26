@@ -1,4 +1,4 @@
-export { connectDatabase, disconnectDatabase } from './connection.js';
+export { connectDatabase, disconnectDatabase, isDatabaseConnected } from './connection.js';
 export { UserModel } from './models/user.model.js';
 export { ProjectModel } from './models/project.model.js';
 export { TargetModel } from './models/target.model.js';

@@ -1,5 +1,5 @@
 import { ScanModel, TargetModel, FindingModel } from '@securityscan/database';
-import { ScanStatus, HttpMethod, FindingStatus } from '@securityscan/contracts';
+import { ScanStatus, FindingStatus } from '@securityscan/contracts';
 import { ScopeGuard } from '@securityscan/scope';
 import { SecureHttpClient, RateLimiter } from '@securityscan/http-client';
 import { VerificationEngine } from '@securityscan/verification-engine';
@@ -51,13 +51,13 @@ export async function runVerificationWorker(scanId: string): Promise<number> {
 
   for (const c of candidates) {
     try {
-      const result = await verificationEngine.verify(
-        c.endpoint,
-        c.method as HttpMethod,
-        {},
-        (status) => status >= 200 && status < 500,
-      );
-      if (result.status === FindingStatus.VERIFIED) {
+      const result = await verificationEngine.verify({
+        findingId: c._id.toString(),
+        endpoint: c.endpoint,
+        method: c.method,
+        parameter: c.parameter,
+      });
+      if (result.verified) {
         c.status = FindingStatus.VERIFIED;
         c.verifiedAt = new Date();
         await c.save();

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 
 const JWT_SECRET = process.env['JWT_SECRET'] ?? 'change-me-in-production';
-const JWT_EXPIRES_IN = process.env['JWT_EXPIRES_IN'] ?? '24h';
+const JWT_EXPIRES_IN = (process.env['JWT_EXPIRES_IN'] ?? '24h') as any;
 
 export const authRouter = Router();
 

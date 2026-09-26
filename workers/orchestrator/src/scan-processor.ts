@@ -2,17 +2,14 @@ import type { SecureHttpClient } from '@securityscan/http-client';
 import { Crawler } from '@securityscan/crawler';
 import { DetectionEngine, type SecurityCheck, type CheckContext } from '@securityscan/detection-engine';
 import { VerificationEngine } from '@securityscan/verification-engine';
-import { AISecurityService, AIPayloadAdvisor } from '@securityscan/ai';
+import { AISecurityService } from '@securityscan/ai';
 import type { AIProvider } from '@securityscan/ai';
-import { FindingEngine } from '@securityscan/finding-engine';
 import { EvidenceCollector } from '@securityscan/evidence-engine';
 import { RiskClassifier } from '@securityscan/risk-engine';
 import { SecurityKnowledgeBase } from '@securityscan/knowledge-base';
-import { ScanStateMachine, ScanState } from '@securityscan/scanner-core';
+import { ScanStateMachine } from '@securityscan/scanner-core';
 import {
   PayloadRegistry,
-  PayloadSelector,
-  MutationPipeline,
   ReflectionContextAnalyzer,
   loadDefaultCatalogs,
   CatalogOverrideManager,
@@ -26,7 +23,7 @@ import { CsrfChecks } from '@securityscan/check-csrf';
 import { FileUploadChecks } from '@securityscan/check-file-upload';
 import { ForcedBrowsingChecks } from '@securityscan/check-access-control';
 import { MassAssignmentChecks } from '@securityscan/check-api';
-import { JwtChecks, OAuthChecks } from '@securityscan/check-authentication';
+import { JwtSecurityChecks, OAuthSecurityChecks } from '@securityscan/check-authentication';
 import { BolaChecks, BflaChecks } from '@securityscan/check-authorization';
 import { CleartextChecks } from '@securityscan/check-cryptography';
 import {
@@ -35,7 +32,22 @@ import {
   CorsChecks,
   InfoDisclosureChecks,
 } from '@securityscan/check-misconfiguration';
-import { HttpMethod, type IFinding, Severity, Confidence, DetectionCategory, ScanProfile } from '@securityscan/contracts';
+import {
+  HttpMethod,
+  FindingStatus,
+  ScanStatus,
+  type IFinding,
+  Severity,
+  Confidence,
+  DetectionCategory,
+} from '@securityscan/contracts';
+import { ScanModel, TargetModel } from '@securityscan/database';
+import { processPassiveAnalysis } from '@securityscan/worker-passive-analysis';
+import { runActiveTestingWorker } from '@securityscan/worker-active-testing';
+import { runApiTestingWorker } from '@securityscan/worker-api-testing';
+import { runVerificationWorker } from '@securityscan/worker-verification';
+import { runEvidenceWorker } from '@securityscan/worker-evidence';
+import { runReportingWorker } from '@securityscan/worker-reporting';
 import { createLogger } from '@securityscan/shared';
 
 const logger = createLogger('scan-processor');
@@ -48,21 +60,49 @@ export interface ScanJob {
   organizationOverrides?: OrganizationOverrides;
 }
 
+export async function processScan(scanId: string): Promise<void> {
+  const scan = await ScanModel.findById(scanId);
+  if (!scan || scan.status === ScanStatus.CANCELLED) return;
+
+  const target = await TargetModel.findById(scan.targetId);
+  if (!target || target.authorization !== 'AUTHORIZED') {
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.FAILED,
+      failureReason: 'Target is not AUTHORIZED for scanning',
+    });
+    return;
+  }
+
+  try {
+    await ScanModel.findByIdAndUpdate(scanId, { status: ScanStatus.CRAWLING, startedAt: new Date() });
+    await processPassiveAnalysis(scanId);
+    await runActiveTestingWorker(scanId);
+    await runApiTestingWorker(scanId);
+    await runVerificationWorker(scanId);
+    await runEvidenceWorker(scanId);
+    await runReportingWorker(scanId);
+    await ScanModel.findByIdAndUpdate(scanId, { status: ScanStatus.COMPLETED, completedAt: new Date() });
+  } catch (err: any) {
+    logger.error({ scanId, err }, 'Scan processing failed');
+    await ScanModel.findByIdAndUpdate(scanId, {
+      status: ScanStatus.FAILED,
+      failureReason: err?.message ?? 'Internal scan execution error',
+    });
+  }
+}
+
 export class ScanProcessor {
   private readonly httpClient: SecureHttpClient;
   private readonly aiService?: AISecurityService;
-  private readonly aiProvider?: AIProvider;
 
-  constructor(httpClient: SecureHttpClient, aiService?: AISecurityService, aiProvider?: AIProvider) {
+  constructor(httpClient: SecureHttpClient, aiService?: AISecurityService, _aiProvider?: AIProvider) {
     this.httpClient = httpClient;
     this.aiService = aiService;
-    this.aiProvider = aiProvider;
   }
 
   async process(job: ScanJob): Promise<IFinding[]> {
-    const sm = new ScanStateMachine(job.scanId);
+    const sm = new ScanStateMachine(ScanStatus.CREATED);
     const findings: IFinding[] = [];
-    const kb = new SecurityKnowledgeBase();
 
     // Initialize payload engine with catalogs and optional org overrides
     const registry = new PayloadRegistry();
@@ -75,35 +115,28 @@ export class ScanProcessor {
       );
     }
 
-    const selector = new PayloadSelector(registry);
     const reflectionAnalyzer = new ReflectionContextAnalyzer(this.httpClient);
-
-    // AI payload advisor (optional)
-    let payloadAdvisor: AIPayloadAdvisor | undefined;
-    if (this.aiProvider) {
-      payloadAdvisor = new AIPayloadAdvisor(this.aiProvider);
-    }
 
     try {
       // Phase 1: Crawl
-      sm.transition(ScanState.CRAWLING);
+      sm.transition(ScanStatus.CRAWLING);
       logger.info({ scanId: job.scanId, target: job.targetUrl }, 'Starting crawl phase');
 
       const crawler = new Crawler(this.httpClient);
-      const discovered = await crawler.crawl(job.targetUrl, { maxDepth: 3, maxPages: 100 });
+      const discovered = await crawler.crawl(job.targetUrl, 3);
 
       // Phase 2: Reflection Pre-Analysis
       logger.info({ scanId: job.scanId, endpoints: discovered.length }, 'Analyzing reflection contexts');
       const reflectionMap = new Map<string, string>();
-      for (const endpoint of discovered) {
+      for (const res of discovered) {
         try {
-          const url = new URL(endpoint);
+          const url = new URL(res.url);
           for (const [paramName] of url.searchParams.entries()) {
-            const analysis = await reflectionAnalyzer.analyzeReflection(endpoint, paramName);
+            const analysis = await reflectionAnalyzer.analyzeReflection(res.url, paramName);
             if (analysis.reflected) {
-              reflectionMap.set(`${endpoint}:${paramName}`, analysis.context);
+              reflectionMap.set(`${res.url}:${paramName}`, analysis.context);
               logger.debug(
-                { endpoint, paramName, context: analysis.context },
+                { endpoint: res.url, paramName, context: analysis.context },
                 'Reflection context identified',
               );
             }
@@ -114,7 +147,6 @@ export class ScanProcessor {
       }
 
       // Phase 3: Active Testing
-      sm.transition(ScanState.TESTING);
       logger.info({ scanId: job.scanId, endpoints: discovered.length }, 'Starting active testing');
 
       const engine = new DetectionEngine();
@@ -129,8 +161,8 @@ export class ScanProcessor {
         ...FileUploadChecks.getChecks(),
         ...ForcedBrowsingChecks.getChecks(),
         ...MassAssignmentChecks.getChecks(),
-        ...JwtChecks.getChecks(),
-        ...OAuthChecks.getChecks(),
+        ...JwtSecurityChecks.getChecks(),
+        ...OAuthSecurityChecks.getChecks(),
         ...BolaChecks.getChecks(),
         ...BflaChecks.getChecks(),
         ...CleartextChecks.getChecks(),
@@ -140,17 +172,33 @@ export class ScanProcessor {
         ...InfoDisclosureChecks.getChecks(),
       ];
 
-      for (const check of allChecks) {
-        engine.registerCheck(check);
-      }
+      engine.registerAll(allChecks);
 
-      for (const endpoint of discovered) {
+      for (const res of discovered) {
+        const endpoint = res.url;
         const ctx: CheckContext = {
-          endpoint: { url: endpoint, method: HttpMethod.GET },
+          scanId: job.scanId,
+          targetId: '',
+          projectId: '',
+          baseUrl: job.targetUrl,
+          endpoint: {
+            id: `ep-${job.scanId}-${endpoint}`,
+            scanId: job.scanId,
+            targetId: '',
+            projectId: '',
+            url: endpoint,
+            path: new URL(endpoint).pathname,
+            method: HttpMethod.GET,
+            parameters: [],
+            headers: {},
+            requiresAuth: false,
+            discoverySource: 'crawler',
+            createdAt: new Date(),
+          },
           httpClient: this.httpClient,
         };
 
-        const results = await engine.run(ctx);
+        const results = await engine.runAll(ctx);
 
         for (const result of results) {
           // Phase 4: Verification
@@ -171,7 +219,7 @@ export class ScanProcessor {
 
           // Phase 5: Evidence Collection
           const evidenceCollector = new EvidenceCollector();
-          const evidence = evidenceCollector.collect({
+          evidenceCollector.collect({
             request: result.evidence?.request ?? { method: 'GET', url: endpoint, headers: {} },
             response: result.evidence?.response ?? {
               statusCode: 0,
@@ -179,36 +227,37 @@ export class ScanProcessor {
               body: '',
               responseTime: 0,
             },
+            endpoint,
+            authContext: 'ANONYMOUS',
           });
 
           // Phase 6: Risk Classification
           const riskClassifier = new RiskClassifier();
-          const risk = riskClassifier.classify({
-            severity: result.severity ?? Severity.MEDIUM,
-            confidence: result.confidence ?? Confidence.LOW,
-            category: result.category ?? DetectionCategory.MISCONFIGURATION,
-          });
+          const risk = riskClassifier.classify(
+            result.severity ?? Severity.MEDIUM,
+            result.confidence ?? Confidence.LOW,
+          );
 
           // Phase 7: Knowledge Base Enrichment
           const cweId = result.cwe?.[0];
-          const cweInfo = cweId ? kb.lookupCWE(cweId) : undefined;
+          const cweInfo = cweId ? SecurityKnowledgeBase.getCwe(cweId) : undefined;
           const owaspId = result.owasp?.[0];
-          const owaspInfo = owaspId ? kb.lookupOwaspTop10(owaspId) : undefined;
+          const owaspInfo = owaspId ? SecurityKnowledgeBase.getOwaspTop10(owaspId) : undefined;
 
           // Phase 8: AI Enrichment (optional)
           let aiAnalysis;
           if (this.aiService) {
             try {
               aiAnalysis = await this.aiService.analyzeFinding({
-                findingTitle: result.title ?? result.ruleId,
-                findingDescription: result.description ?? '',
-                category: result.category ?? 'UNKNOWN',
-                severity: result.severity ?? 'MEDIUM',
+                ruleId: result.ruleId,
+                ruleName: result.title ?? result.ruleId,
+                cwe: result.cwe ?? [],
+                owasp: result.owasp ?? [],
                 endpoint: result.endpoint ?? endpoint,
                 method: result.method ?? 'GET',
                 parameter: result.parameter,
-                cwe: result.cwe,
-                owasp: result.owasp,
+                rawRequest: result.evidence?.request ?? { method: 'GET', url: endpoint, headers: {} },
+                rawResponse: result.evidence?.response ?? { statusCode: 200, headers: {}, responseTime: 0 },
               });
             } catch (err) {
               logger.warn({ error: err }, 'AI enrichment failed, continuing without');
@@ -218,24 +267,32 @@ export class ScanProcessor {
           const finding: IFinding = {
             id: `finding-${job.scanId}-${findings.length + 1}`,
             scanId: job.scanId,
+            projectId: '',
+            targetId: '',
             ruleId: result.ruleId,
             title: result.title ?? result.ruleId,
             description: result.description ?? '',
-            severity: risk.adjustedSeverity,
+            impact: result.impact ?? '',
+            severity: risk.severity,
             confidence: verification.confidence as any,
             category: result.category ?? DetectionCategory.MISCONFIGURATION,
             endpoint: result.endpoint ?? endpoint,
             method: result.method ?? 'GET',
             parameter: result.parameter,
-            evidence: evidence as any,
+            evidenceIds: [],
             remediation: result.remediation,
             cwe: result.cwe ?? [],
             owasp: result.owasp ?? [],
+            apiOwasp: result.apiOwasp ?? [],
             cvssVector: (result as any).cvssVector,
             cvssScore: (result as any).cvssScore,
             wstg: (result as any).wstg ?? [],
             asvs: (result as any).asvs ?? [],
-            status: 'OPEN',
+            references: result.references ?? [],
+            deduplicationKey: `${job.scanId}:${result.ruleId}:${endpoint}`,
+            firstDetectedAt: new Date(),
+            lastDetectedAt: new Date(),
+            status: FindingStatus.VERIFIED,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
@@ -250,15 +307,14 @@ export class ScanProcessor {
               confidence: finding.confidence,
               cwe: cweInfo?.name,
               owasp: owaspInfo?.name,
-              aiExploitability: aiAnalysis?.exploitability,
+              aiExploitability: aiAnalysis?.falsePositiveLikelihood,
             },
             'Finding confirmed and enriched',
           );
         }
       }
 
-      sm.transition(ScanState.ANALYZING);
-      sm.transition(ScanState.COMPLETED);
+      sm.transition(ScanStatus.COMPLETED);
 
       logger.info(
         {
@@ -270,7 +326,7 @@ export class ScanProcessor {
         'Scan completed successfully',
       );
     } catch (error) {
-      sm.transition(ScanState.FAILED);
+      sm.transition(ScanStatus.FAILED);
       logger.error({ scanId: job.scanId, error }, 'Scan failed');
       throw error;
     }

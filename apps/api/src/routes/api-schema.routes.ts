@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { ApiModel, ApiSchemaModel, EndpointModel, ProjectModel } from '@securityscan/database';
-import { ApiType, ApiSchemaFormat, HttpMethod } from '@securityscan/contracts';
+import { ApiModel, ApiSchemaModel, ProjectModel } from '@securityscan/database';
+import { ApiType, ApiSchemaFormat } from '@securityscan/contracts';
 import { OpenApiParser } from '@securityscan/openapi';
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
 

@@ -13,7 +13,19 @@ export interface AICompletionOptions {
 
 export interface IAIProvider {
   readonly name: string;
+  readonly model?: string;
   generateCompletion(messages: AIModelMessage[], options?: AICompletionOptions): Promise<string>;
+  complete?(prompt: string, options?: AICompletionOptions): Promise<string>;
+}
+
+export type AIProvider = IAIProvider;
+
+export interface AIAnalysisRequest {
+  [key: string]: unknown;
+}
+
+export interface AIAnalysisResponse {
+  [key: string]: unknown;
 }
 
 // Structured schemas for validated AI outputs
