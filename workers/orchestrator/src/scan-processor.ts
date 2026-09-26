@@ -12,6 +12,7 @@ import {
   SCAN_EVENTS_CHANNEL,
   createRedisClient,
   formatScanProgressEvent,
+  dispatchWebhook,
 } from '@securityscan/scanner-core';
 import {
   PayloadRegistry,
@@ -45,8 +46,16 @@ import {
   Severity,
   Confidence,
   DetectionCategory,
+  WebhookEvent,
 } from '@securityscan/contracts';
-import { ScanModel, TargetModel } from '@securityscan/database';
+import {
+  ScanModel,
+  TargetModel,
+  ProjectModel,
+  MembershipModel,
+  FindingModel,
+  WebhookSubscriptionModel,
+} from '@securityscan/database';
 import { processPassiveAnalysis } from '@securityscan/worker-passive-analysis';
 import { runActiveTestingWorker } from '@securityscan/worker-active-testing';
 import { runApiTestingWorker } from '@securityscan/worker-api-testing';
@@ -80,6 +89,52 @@ async function emitProgress(
     await pub.publish(SCAN_EVENTS_CHANNEL, JSON.stringify(event));
   } catch (err: unknown) {
     logger.warn({ scanId, phase, err }, 'Failed to publish scan progress event');
+  }
+}
+
+async function triggerScanWebhooks(
+  scanId: string,
+  event: WebhookEvent,
+  data: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const scan = await ScanModel.findById(scanId);
+    if (!scan) return;
+    const project = await ProjectModel.findById(scan.projectId);
+    if (!project) return;
+    const membership = await MembershipModel.findOne({ userId: project.ownerId });
+    if (!membership) return;
+
+    const target = await TargetModel.findById(scan.targetId);
+    const targetUrl = target?.baseUrl;
+
+    const subscriptions = await WebhookSubscriptionModel.find({
+      organizationId: membership.organizationId,
+      enabled: true,
+      events: event,
+    });
+
+    if (!subscriptions || subscriptions.length === 0) return;
+
+    const payload = {
+      event,
+      timestamp: new Date().toISOString(),
+      organizationId: membership.organizationId.toString(),
+      scanId,
+      targetUrl,
+      data,
+    };
+
+    await Promise.allSettled(
+      subscriptions.map((sub) =>
+        dispatchWebhook(
+          { url: sub.url, secret: sub.secret, format: sub.format as any },
+          payload,
+        ),
+      ),
+    );
+  } catch (err: any) {
+    logger.warn({ scanId, event, err: err?.message }, 'Failed to trigger scan webhooks');
   }
 }
 
@@ -185,6 +240,32 @@ export async function processScan(scanId: string, options?: { traceId?: string }
     scanMetrics.observeHistogram('securityscan_scan_duration_seconds', totalDuration);
 
     logger.info({ scanId, traceId, durationSeconds: totalDuration }, 'Scan execution completed successfully');
+
+    // Dispatch webhook notifications
+    await triggerScanWebhooks(scanId, WebhookEvent.SCAN_COMPLETED, {
+      status: ScanStatus.COMPLETED,
+      durationSeconds: totalDuration,
+      message: 'Scan execution completed successfully',
+    });
+
+    try {
+      const verifiedFindings = await FindingModel.find({
+        scanId,
+        severity: { $in: [Severity.CRITICAL, Severity.HIGH] },
+        status: FindingStatus.VERIFIED,
+      });
+      if (verifiedFindings.length > 0) {
+        const hasCritical = verifiedFindings.some((f) => f.severity === Severity.CRITICAL);
+        const eventType = hasCritical ? WebhookEvent.FINDING_CRITICAL : WebhookEvent.FINDING_HIGH;
+        await triggerScanWebhooks(scanId, eventType, {
+          totalFindings: verifiedFindings.length,
+          criticalCount: verifiedFindings.filter((f) => f.severity === Severity.CRITICAL).length,
+          highCount: verifiedFindings.filter((f) => f.severity === Severity.HIGH).length,
+        });
+      }
+    } catch (findingErr: unknown) {
+      logger.warn({ scanId, err: findingErr }, 'Failed checking verified findings for webhook alerts');
+    }
   } catch (err: any) {
     scanMetrics.incrementGauge('securityscan_scans_active', {}, -1);
     if (err?.message === 'Scan cancelled by user') {
@@ -200,6 +281,11 @@ export async function processScan(scanId: string, options?: { traceId?: string }
       failureReason: err?.message ?? 'Internal scan execution error',
     });
     await emitProgress(scanId, ScanStatus.FAILED, { message: err?.message ?? 'Internal scan execution error' });
+
+    await triggerScanWebhooks(scanId, WebhookEvent.SCAN_FAILED, {
+      status: ScanStatus.FAILED,
+      failureReason: err?.message ?? 'Internal scan execution error',
+    });
   }
 }
 

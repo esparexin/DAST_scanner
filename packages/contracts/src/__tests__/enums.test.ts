@@ -3,6 +3,8 @@ import {
   ScanStatus,
   AuthorizationState,
   ScanProfile,
+  WebhookEvent,
+  WebhookFormat,
 } from '../enums.js';
 import { SCAN_STATE_TRANSITIONS } from '../types/scan.js';
 
@@ -87,5 +89,21 @@ describe('AuthorizationState', () => {
     expect(AuthorizationState.AUTHORIZED).toBe('AUTHORIZED');
     expect(AuthorizationState.EXPIRED).toBe('EXPIRED');
     expect(AuthorizationState.REVOKED).toBe('REVOKED');
+  });
+});
+
+describe('WebhookEvent and WebhookFormat', () => {
+  it('has expected webhook event types', () => {
+    expect(WebhookEvent.SCAN_COMPLETED).toBe('SCAN_COMPLETED');
+    expect(WebhookEvent.SCAN_FAILED).toBe('SCAN_FAILED');
+    expect(WebhookEvent.FINDING_CRITICAL).toBe('FINDING_CRITICAL');
+    expect(WebhookEvent.FINDING_HIGH).toBe('FINDING_HIGH');
+    expect(WebhookEvent.TARGET_VERIFIED).toBe('TARGET_VERIFIED');
+  });
+
+  it('has supported webhook formats', () => {
+    expect(WebhookFormat.GENERIC).toBe('GENERIC');
+    expect(WebhookFormat.SLACK).toBe('SLACK');
+    expect(WebhookFormat.DISCORD).toBe('DISCORD');
   });
 });

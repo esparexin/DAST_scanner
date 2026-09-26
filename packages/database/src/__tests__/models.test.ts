@@ -6,7 +6,17 @@ import { MembershipModel } from '../models/membership.model.js';
 import { ProjectModel } from '../models/project.model.js';
 import { TargetModel } from '../models/target.model.js';
 import { FindingModel } from '../models/finding.model.js';
-import { AuthorizationState, TargetEnvironment, Severity, Confidence, FindingStatus, DetectionCategory } from '@securityscan/contracts';
+import { WebhookSubscriptionModel } from '../models/webhook-subscription.model.js';
+import {
+  AuthorizationState,
+  TargetEnvironment,
+  Severity,
+  Confidence,
+  FindingStatus,
+  DetectionCategory,
+  WebhookEvent,
+  WebhookFormat,
+} from '@securityscan/contracts';
 
 describe('Database Models Schema Validation', () => {
   it('validates User model schema requirements', async () => {
@@ -80,5 +90,20 @@ describe('Database Models Schema Validation', () => {
     const error = membership.validateSync();
     expect(error).toBeUndefined();
     expect(membership.role).toBe('VIEWER');
+  });
+
+  it('validates WebhookSubscription model schema requirements', async () => {
+    const webhook = new WebhookSubscriptionModel({
+      organizationId: new mongoose.Types.ObjectId(),
+      name: 'Slack Alerts',
+      url: 'https://hooks.slack.com/services/T00/B00/X00',
+      secret: 'whsec_test123456789',
+      events: [WebhookEvent.SCAN_COMPLETED, WebhookEvent.FINDING_CRITICAL],
+      format: WebhookFormat.SLACK,
+    });
+    const error = webhook.validateSync();
+    expect(error).toBeUndefined();
+    expect(webhook.enabled).toBe(true);
+    expect(webhook.format).toBe('SLACK');
   });
 });

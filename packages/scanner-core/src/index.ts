@@ -17,3 +17,9 @@ export {
   type StagedPipelineOptions,
   type StagedPipelineResult,
 } from './intelligence/index.js';
+export {
+  createWebhookSignature,
+  verifyWebhookSignature,
+  formatWebhookPayload,
+  dispatchWebhook,
+} from './webhook-dispatcher.js';

@@ -230,3 +230,19 @@ export enum AuditAction {
   CATALOG_PROMOTED = 'CATALOG_PROMOTED',
   CATALOG_ROLLED_BACK = 'CATALOG_ROLLED_BACK',
 }
+
+// === Webhooks & Notifications ===
+
+export enum WebhookEvent {
+  SCAN_COMPLETED = 'SCAN_COMPLETED',
+  SCAN_FAILED = 'SCAN_FAILED',
+  FINDING_CRITICAL = 'FINDING_CRITICAL',
+  FINDING_HIGH = 'FINDING_HIGH',
+  TARGET_VERIFIED = 'TARGET_VERIFIED',
+}
+
+export enum WebhookFormat {
+  GENERIC = 'GENERIC',
+  SLACK = 'SLACK',
+  DISCORD = 'DISCORD',
+}
