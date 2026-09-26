@@ -110,3 +110,6 @@ export async function processDiscovery(job: Job) {
   logger.info({ scanId, endpoints: endpoints.length, requests: stats.requestCount }, 'Discovery complete');
   return { endpoints: endpoints.length, requests: stats.requestCount };
 }
+
+export const runDiscoveryWorker = processDiscovery;
+

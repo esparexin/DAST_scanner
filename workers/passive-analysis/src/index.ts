@@ -116,3 +116,6 @@ export async function processPassiveAnalysis(scanId: string) {
   logger.info({ scanId, checksExecuted, findingsCreated }, 'Passive analysis complete');
   return { checksExecuted, findingsCreated };
 }
+
+export const runPassiveAnalysisWorker = processPassiveAnalysis;
+
