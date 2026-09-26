@@ -1,12 +1,16 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { StatusBadge } from '../../components/status-badge';
 import { ScanProgressModal } from '../../components/scan-progress-modal';
 import { ScanProfile, ScanStatus } from '@securityscan/contracts';
 import {
   scansApi,
+  targetsApi,
+  authApi,
   type ApiScan,
+  type ApiTarget,
   type ApiDryRunResult,
   type CreateScanRequest,
 } from '../../lib/api';
@@ -24,9 +28,10 @@ const TERMINAL_STATUSES = new Set<string>([
 
 export default function ScansPage() {
   const [scans, setScans] = useState<ApiScan[]>([]);
+  const [targets, setTargets] = useState<ApiTarget[]>([]);
+  const [selectedTargetId, setSelectedTargetId] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
-  const [newTarget, setNewTarget] = useState('');
   const [newProfile, setNewProfile] = useState('WEB_STANDARD');
   const [newDryRun, setNewDryRun] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -42,10 +47,19 @@ export default function ScansPage() {
     if (match) setSelectedScanForDetails(match);
   }, [scans, selectedScanForDetails?._id]);
 
-  const loadScans = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const data = await scansApi.list();
-      setScans(data);
+      await authApi.ensureSession();
+      const [scansData, targetsData] = await Promise.all([
+        scansApi.list().catch(() => []),
+        targetsApi.list().catch(() => []),
+      ]);
+      setScans(scansData);
+      setTargets(targetsData);
+      if (targetsData.length > 0 && targetsData[0]?._id) {
+        const firstId = targetsData[0]._id;
+        setSelectedTargetId((current) => current || firstId);
+      }
     } catch {
       setScans([]);
     } finally {
@@ -54,10 +68,10 @@ export default function ScansPage() {
   }, []);
 
   useEffect(() => {
-    loadScans();
-    const interval = setInterval(loadScans, 10000);
+    loadData();
+    const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
-  }, [loadScans]);
+  }, [loadData]);
 
   // Hook real-time Server-Sent Events (SSE) for active, in-progress scans
   const activeScanIdsKey = useMemo(() => {
@@ -128,24 +142,35 @@ export default function ScansPage() {
     };
   }, [activeScanIdsKey]);
 
+  const selectedTarget = useMemo(() => {
+    return targets.find((t) => t._id === selectedTargetId) || null;
+  }, [targets, selectedTargetId]);
+
   const handleCreate = async () => {
-    if (!newTarget.trim()) return;
+    if (!selectedTarget) {
+      setError('Please select a target for this scan.');
+      return;
+    }
+    if (selectedTarget.authorization !== 'AUTHORIZED' && !newDryRun) {
+      setError('Target ownership is not verified. Complete verification under Targets or run in Dry-Run Mode.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
       const payload: CreateScanRequest = {
-        targetUrl: newTarget.trim(),
-        scopePatterns: [`${new URL(newTarget.trim()).origin}/*`],
+        projectId: selectedTarget.projectId,
+        targetId: selectedTarget._id,
         profile: newProfile,
         dryRun: newDryRun,
       };
       await scansApi.create(payload);
       setShowNew(false);
-      setNewTarget('');
       setNewDryRun(false);
-      await loadScans();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create scan');
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create scan';
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -158,8 +183,9 @@ export default function ScansPage() {
       setScans((current) =>
         current.map((s) => (s._id === id ? { ...s, status: updated.status, cancelledAt: updated.cancelledAt } : s)),
       );
-    } catch (err: any) {
-      setError(err.message || 'Failed to cancel scan');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to cancel scan';
+      setError(msg);
     } finally {
       setCancellingId(null);
     }
@@ -170,8 +196,9 @@ export default function ScansPage() {
     try {
       const data = await scansApi.dryRun(id);
       setDryRunModal({ scanId: id, data });
-    } catch (err: any) {
-      setError(err.message || 'Failed to inspect scan configuration');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to inspect scan configuration';
+      setError(msg);
     } finally {
       setDryRunLoading(null);
     }
@@ -199,25 +226,38 @@ export default function ScansPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Scan</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target URL
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Target
               </label>
-              <input
-                type="url"
-                value={newTarget}
-                onChange={(e) => setNewTarget(e.target.value)}
-                placeholder="https://api.example.com"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
-              />
+              {targets.length === 0 ? (
+                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-300 rounded-md p-3">
+                  No targets found.{' '}
+                  <Link href="/targets" className="text-indigo-600 font-semibold underline">
+                    Add and verify a target in Targets first
+                  </Link>
+                </div>
+              ) : (
+                <select
+                  value={selectedTargetId}
+                  onChange={(e) => setSelectedTargetId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  {targets.map((t) => (
+                    <option key={t._id} value={t._id}>
+                      {t.name ? `${t.name} (${t.baseUrl})` : t.baseUrl} [{t.authorization || 'PENDING'}]
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Scan Profile
               </label>
               <select
                 value={newProfile}
                 onChange={(e) => setNewProfile(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
               >
                 {SCAN_PROFILES.map((p) => (
                   <option key={p} value={p}>
@@ -227,6 +267,17 @@ export default function ScansPage() {
               </select>
             </div>
           </div>
+
+          {selectedTarget && selectedTarget.authorization !== 'AUTHORIZED' && (
+            <div className="mt-3 bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-800">
+              <span className="font-bold">Target Pending Authorization:</span> This target has not completed DNS/HTTP ownership verification yet. You can run in <strong>Dry-Run Mode</strong> to validate scope and configuration without sending exploits, or verify ownership on the{' '}
+              <Link href="/targets" className="underline font-bold">
+                Targets page
+              </Link>{' '}
+              before executing active scans.
+            </div>
+          )}
+
           <div className="mt-3 flex items-center">
             <input
               id="dryRun"
@@ -243,14 +294,14 @@ export default function ScansPage() {
           <div className="mt-4 flex gap-3">
             <button
               onClick={handleCreate}
-              disabled={submitting}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 text-sm"
+              disabled={submitting || targets.length === 0}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
             >
               {submitting ? 'Creating...' : 'Start Scan'}
             </button>
             <button
               onClick={() => setShowNew(false)}
-              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 text-sm"
+              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 text-sm font-medium"
             >
               Cancel
             </button>

@@ -22,16 +22,20 @@ targetRouter.use(resolveTenant);
 targetRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
     const { projectId } = req.query;
-    if (!projectId) {
-      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'projectId is required' } });
-      return;
+    let filter: Record<string, unknown> = {};
+    if (projectId) {
+      const project = await ProjectModel.findOne({ _id: projectId, ownerId: req.userId });
+      if (!project) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
+        return;
+      }
+      filter = { projectId };
+    } else {
+      const userProjects = await ProjectModel.find({ ownerId: req.userId }).select('_id');
+      const projectIds = userProjects.map((p) => p._id);
+      filter = { projectId: { $in: projectIds } };
     }
-    const project = await ProjectModel.findOne({ _id: projectId, ownerId: req.userId });
-    if (!project) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
-      return;
-    }
-    const targets = await TargetModel.find({ projectId }).sort({ createdAt: -1 });
+    const targets = await TargetModel.find(filter).sort({ createdAt: -1 });
     res.json({ data: targets });
   } catch (err) {
     next(err);
