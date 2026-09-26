@@ -1,9 +1,33 @@
 import { describe, it, expect } from 'vitest';
 import { CatalogSigner } from '../signing/catalog-signer.js';
 import { SQLI_CATALOG, XSS_CATALOG, TRAVERSAL_CATALOG, AUTH_CATALOG } from '../catalogs/index.js';
+import { DetectionCategory, DetectionType, Severity, Confidence, type ISecurityRule, type SecurityIntelligencePackage } from '@securityscan/contracts';
 
 describe('CatalogSigner', () => {
   const allPayloads = [...SQLI_CATALOG, ...XSS_CATALOG, ...TRAVERSAL_CATALOG, ...AUTH_CATALOG];
+
+  const sampleRules: ISecurityRule[] = [
+    {
+      id: 'SEC-SQLI-001',
+      name: 'SQL Injection Rule',
+      description: 'Detects SQL injection vulnerability',
+      category: DetectionCategory.INJECTION,
+      type: DetectionType.ACTIVE,
+      severity: Severity.HIGH,
+      confidence: Confidence.CONFIRMED,
+      owasp: ['A03:2021'],
+      apiOwasp: ['API8:2023'],
+      cwe: ['CWE-89'],
+      wstg: ['WSTG-INPV-05'],
+      asvs: ['V5.3.4'],
+      portswigger: [],
+      remediation: 'Use parameterized queries',
+      references: [],
+      enabled: true,
+      tags: ['sqli'],
+      ruleVersion: '1.0.0',
+    },
+  ];
 
   it('generates a valid RSA key pair', () => {
     const keys = CatalogSigner.generateKeyPair();
@@ -55,5 +79,50 @@ describe('CatalogSigner', () => {
     const hash1 = CatalogSigner.computeContentHash(allPayloads);
     const hash2 = CatalogSigner.computeContentHash([...allPayloads].reverse());
     expect(hash1).toBe(hash2); // Order-independent because sorted internally
+  });
+
+  describe('Composite SecurityIntelligencePackage signing', () => {
+    const pkg: SecurityIntelligencePackage = {
+      packageVersion: '2.0.0',
+      generatedAt: new Date().toISOString(),
+      rules: sampleRules,
+      payloads: allPayloads.slice(0, 5),
+    };
+
+    it('signs and verifies a composite intelligence package', () => {
+      const keys = CatalogSigner.generateKeyPair();
+      const manifest = CatalogSigner.signPackage(pkg, keys.privateKey);
+
+      expect(manifest.packageVersion).toBe('2.0.0');
+      expect(manifest.ruleCount).toBe(1);
+      expect(manifest.payloadCount).toBe(5);
+      expect(manifest.packageHash).toHaveLength(64);
+      expect(manifest.signature).toBeTruthy();
+
+      const valid = CatalogSigner.verifyPackage(manifest, pkg, keys.publicKey);
+      expect(valid).toBe(true);
+    });
+
+    it('rejects package when rule content is modified', () => {
+      const keys = CatalogSigner.generateKeyPair();
+      const manifest = CatalogSigner.signPackage(pkg, keys.privateKey);
+
+      const tamperedPkg: SecurityIntelligencePackage = {
+        ...pkg,
+        rules: [{ ...sampleRules[0]!, severity: Severity.LOW }],
+      };
+
+      const valid = CatalogSigner.verifyPackage(manifest, tamperedPkg, keys.publicKey);
+      expect(valid).toBe(false);
+    });
+
+    it('produces deterministic package hash', () => {
+      const hash1 = CatalogSigner.computePackageHash(pkg);
+      const hash2 = CatalogSigner.computePackageHash({
+        ...pkg,
+        payloads: [...pkg.payloads].reverse(),
+      });
+      expect(hash1).toBe(hash2);
+    });
   });
 });
