@@ -39,3 +39,4 @@ infrastructure/redis/data/
 
 # Reports output
 reports-output/
+uploads/

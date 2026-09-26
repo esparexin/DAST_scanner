@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@securityscan/contracts": ["./packages/contracts/src/index.ts"],
+      "@securityscan/database": ["./packages/database/src/index.ts"],
+      "@securityscan/shared": ["./packages/shared/src/index.ts"],
+      "@securityscan/scanner-core": ["./packages/scanner-core/src/index.ts"],
+      "@securityscan/metrics": ["./packages/metrics/src/index.ts"],
+      "@securityscan/scope": ["./packages/scope/src/index.ts"]
+    }
+  },
+  "include": ["scripts/**/*", "tools/**/*"]
+}
