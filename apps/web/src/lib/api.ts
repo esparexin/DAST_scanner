@@ -31,7 +31,10 @@ export interface ApiScanProgress {
   currentTask?: string;
   totalEndpoints?: number;
   testedEndpoints?: number;
+  endpointsDiscovered?: number;
   findingsFound?: number;
+  findingsTotal?: number;
+  findingsConfirmed?: number;
 }
 
 export interface ApiScan {

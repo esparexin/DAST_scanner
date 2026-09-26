@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { StatusBadge } from '../../components/status-badge';
+import { ScanProgressModal } from '../../components/scan-progress-modal';
 import { ScanProfile, ScanStatus } from '@securityscan/contracts';
 import {
   scansApi,
@@ -33,6 +34,13 @@ export default function ScansPage() {
   const [error, setError] = useState('');
   const [dryRunModal, setDryRunModal] = useState<{ scanId: string; data: ApiDryRunResult } | null>(null);
   const [dryRunLoading, setDryRunLoading] = useState<string | null>(null);
+  const [selectedScanForDetails, setSelectedScanForDetails] = useState<ApiScan | null>(null);
+
+  useEffect(() => {
+    if (!selectedScanForDetails) return;
+    const match = scans.find((s) => s._id === selectedScanForDetails._id);
+    if (match) setSelectedScanForDetails(match);
+  }, [scans, selectedScanForDetails?._id]);
 
   const loadScans = useCallback(async () => {
     try {
@@ -72,20 +80,30 @@ export default function ScansPage() {
         es.onmessage = (event) => {
           try {
             const payload = JSON.parse(event.data);
+            const phase = payload.phase || payload.progress?.phase;
+            const msg = payload.message || payload.progress?.currentTask;
             setScans((currentScans) =>
               currentScans.map((s) => {
                 if (s._id === payload.scanId) {
                   return {
                     ...s,
-                    status: payload.phase || s.status,
-                    progress: payload.progress ?? s.progress,
+                    status: phase || s.status,
+                    findingsCount: payload.findingsTotal ?? s.findingsCount,
+                    progress: {
+                      ...s.progress,
+                      phase: phase || s.progress?.phase,
+                      percent: payload.progress?.percent ?? s.progress?.percent,
+                      currentTask: msg || s.progress?.currentTask,
+                      endpointsDiscovered: payload.endpointsDiscovered ?? s.progress?.endpointsDiscovered,
+                      findingsTotal: payload.findingsTotal ?? s.progress?.findingsTotal,
+                    },
                   };
                 }
                 return s;
               }),
             );
 
-            if (payload.phase && TERMINAL_STATUSES.has(payload.phase)) {
+            if (phase && TERMINAL_STATUSES.has(phase)) {
               es.close();
             }
           } catch {
@@ -397,6 +415,15 @@ export default function ScansPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end items-center gap-2">
+                        <button
+                          onClick={() => setSelectedScanForDetails(scan)}
+                          className="text-gray-700 hover:text-gray-900 text-xs font-semibold px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1.5"
+                        >
+                          {isActive && (
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          )}
+                          {isActive ? 'Live Progress' : 'Details'}
+                        </button>
                         {isActive && (
                           <button
                             onClick={() => handleCancel(scan._id)}
@@ -422,6 +449,13 @@ export default function ScansPage() {
           </tbody>
         </table>
       </div>
+
+      <ScanProgressModal
+        scan={selectedScanForDetails}
+        isOpen={!!selectedScanForDetails}
+        onClose={() => setSelectedScanForDetails(null)}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }
