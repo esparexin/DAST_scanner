@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { StatusBadge } from '../../components/status-badge';
+import { ScanProfile, ScanStatus } from '@securityscan/contracts';
 import {
   scansApi,
   type ApiScan,
@@ -9,20 +10,16 @@ import {
   type CreateScanRequest,
 } from '../../lib/api';
 
-const SCAN_PROFILES = [
-  'PASSIVE',
-  'QUICK',
-  'WEB_STANDARD',
-  'API_STANDARD',
-  'AUTHENTICATED',
-  'AUTHORIZATION',
-  'FULL_ASSESSMENT',
-  'CICD',
-  'PRODUCTION_SAFE',
-  'SECURITY_LAB',
-];
+/** Derived from the ScanProfile enum in @securityscan/contracts — no magic strings */
+const SCAN_PROFILES = Object.values(ScanProfile);
 
-const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT']);
+/** Statuses where a scan can no longer transition to another state */
+const TERMINAL_STATUSES = new Set<string>([
+  ScanStatus.COMPLETED,
+  ScanStatus.FAILED,
+  ScanStatus.CANCELLED,
+  ScanStatus.TIMEOUT,
+]);
 
 export default function ScansPage() {
   const [scans, setScans] = useState<ApiScan[]>([]);
