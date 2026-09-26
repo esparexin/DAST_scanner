@@ -12,6 +12,7 @@ import { SCAN_EVENTS_CHANNEL, createRedisClient } from '@securityscan/scanner-co
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
 import { resolveTenant, type TenantRequest } from '../middleware/tenant.js';
 import { validate } from '../middleware/validate.js';
+import { scanRateLimiter } from '../middleware/rate-limiter.js';
 import { enqueueScan } from '../services/queue.service.js';
 import { checkScanQuota } from '../services/quota.service.js';
 
@@ -51,7 +52,7 @@ scanRouter.get('/:id', async (req: AuthRequest, res, next) => {
   }
 });
 
-scanRouter.post('/', validate(CreateScanSchema), async (req: AuthRequest, res, next) => {
+scanRouter.post('/', scanRateLimiter, validate(CreateScanSchema), async (req: AuthRequest, res, next) => {
   try {
     const { projectId, targetId, profile, dryRun, authProfileIds, enabledCategories, excludedChecks } = req.body;
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { projectRouter } from './routes/project.routes.js';
@@ -14,13 +15,19 @@ import { apiSchemaRouter } from './routes/api-schema.routes.js';
 import { metricsRoutes } from './routes/metrics.routes.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { intelligenceRouter } from './routes/intelligence.routes.js';
+import { apiRateLimiter } from './middleware/rate-limiter.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 export function createApp() {
   const app = express();
 
+  app.use(helmet());
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+
+  if (process.env['NODE_ENV'] !== 'test') {
+    app.use('/api', apiRateLimiter);
+  }
 
   // Routes
   app.use('/api/health', healthRouter);

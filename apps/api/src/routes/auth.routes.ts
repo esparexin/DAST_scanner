@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { UserModel } from '@securityscan/database';
 import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
+import { authRateLimiter } from '../middleware/rate-limiter.js';
 
 const JWT_SECRET = process.env['JWT_SECRET'] ?? 'change-me-in-production';
 const JWT_EXPIRES_IN = (process.env['JWT_EXPIRES_IN'] ?? '24h') as any;
@@ -21,7 +22,7 @@ const LoginSchema = z.object({
   password: z.string().min(1),
 });
 
-authRouter.post('/register', validate(RegisterSchema), async (req, res, next) => {
+authRouter.post('/register', authRateLimiter, validate(RegisterSchema), async (req, res, next) => {
   try {
     const { email, name, password } = req.body;
     const existing = await UserModel.findOne({ email });
@@ -43,7 +44,7 @@ authRouter.post('/register', validate(RegisterSchema), async (req, res, next) =>
   }
 });
 
-authRouter.post('/login', validate(LoginSchema), async (req, res, next) => {
+authRouter.post('/login', authRateLimiter, validate(LoginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await UserModel.findOne({ email });
