@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { VerifyTargetModal } from '@/components/verify-target-modal';
-import { targetsApi, projectsApi, authApi, type ApiTarget, type ApiProject } from '@/lib/api';
+import { targetsApi, projectsApi, authApi, ApiError, type ApiTarget, type ApiProject } from '@/lib/api';
 import Link from 'next/link';
 
 export default function TargetsPage() {
@@ -45,10 +45,36 @@ export default function TargetsPage() {
     try {
       setSubmitting(true);
       setError(null);
+
+      // Normalize URL (prepend https:// if protocol is omitted)
+      let formattedUrl = newBaseUrl.trim();
+      if (!/^https?:\/\//i.test(formattedUrl)) {
+        formattedUrl = `https://${formattedUrl}`;
+      }
+
+      // Parse hostname for scope and fallback target name
+      let hostname: string;
+      try {
+        const parsed = new URL(formattedUrl);
+        hostname = parsed.hostname;
+        if (!hostname) {
+          throw new Error('Invalid host');
+        }
+      } catch {
+        setError('Please enter a valid URL (e.g. https://example.com or example.com)');
+        setSubmitting(false);
+        return;
+      }
+
+      const targetName = newTargetName.trim() || hostname;
+
       const created = await targetsApi.create({
         projectId: newProjectId,
-        baseUrl: newBaseUrl.trim(),
-        name: newTargetName.trim() || undefined,
+        baseUrl: formattedUrl,
+        name: targetName,
+        scope: {
+          allowedHosts: [hostname],
+        },
       });
       setTargets((prev) => [created, ...prev]);
       setShowAddModal(false);
@@ -57,8 +83,15 @@ export default function TargetsPage() {
       // Auto-open verification modal for the newly added target
       setSelectedTarget(created);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to add target';
-      setError(msg);
+      if (err instanceof ApiError && Array.isArray(err.details)) {
+        const detailMsgs = err.details
+          .map((d: { message?: string }) => d.message)
+          .filter(Boolean);
+        setError(detailMsgs.length > 0 ? detailMsgs.join('. ') : err.message);
+      } else {
+        const msg = err instanceof Error ? err.message : 'Failed to add target';
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -232,10 +265,10 @@ export default function TargetsPage() {
             <form onSubmit={handleAddTarget} className="space-y-4 text-sm">
               <div>
                 <label className="block text-xs font-bold text-black mb-1">
-                  Target Base URL *
+                  Target Base URL * <span className="text-[11px] text-gray-500 font-normal">(e.g. https://example.com or example.com)</span>
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   required
                   placeholder="https://example.com"
                   value={newBaseUrl}

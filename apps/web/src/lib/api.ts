@@ -283,7 +283,13 @@ export interface ApiTargetChallenge {
 export interface CreateTargetRequest {
   projectId: string;
   baseUrl: string;
-  name?: string;
+  name: string;
+  scope?: {
+    allowedHosts: string[];
+    excludedHosts?: string[];
+    allowedPaths?: string[];
+    excludedPaths?: string[];
+  };
 }
 
 // Targets
